@@ -23,13 +23,6 @@ end
 abbr lsfg 'LSFG_PROCESS="miyu"'
 # fa运行fastfetch
 abbr fa fastfetch
-# f运行带二次元美少女的fastfetch
-function f 
-    command bash $HOME/.config/scripts/fastfetch-random-wife.sh
-   end
-function fnsfw
-    command env NSFW=1 bash $HOME/.config/scripts/fastfetch-random-wife.sh
-   end
 abbr reboot 'systemctl reboot'
 function 滚
 	sysup 
