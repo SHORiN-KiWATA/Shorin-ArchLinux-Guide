@@ -112,7 +112,7 @@
     "tooltip-format-on": "左键：禁用蓝牙\n右键：打开面板",
     //连接状态下的图标和提示
     "format-connected": "󰂱",
-    "tooltip-format-connected": "󰂱 {:device_alias}\n---\n右键：打开面板",
+    "tooltip-format-connected": "󰂱 {device_alias}\n---\n右键：打开面板",
     //点击功能
     "on-click": "~/.config/waybar/scripts/toggle-bluetooth.sh",
     "on-click-right": "kitty --class bluetui  -e bluetui",
