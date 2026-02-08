@@ -7,7 +7,18 @@
     },
     "format": "{icon}",
     "format-charging": "󰂄 {capacity}% ",
-    "format-icons": ["󰂎", "󰁺", "󰁻", "󰁼", "󰁽", "󰁾", "󰁿", "󰂀", "󰂂", "󰁹"],
+    "format-icons": [
+      "󰂎",
+      "󰁺",
+      "󰁻",
+      "󰁼",
+      "󰁽",
+      "󰁾",
+      "󰁿",
+      "󰂀",
+      "󰂂",
+      "󰁹"
+    ],
     "tooltip-format": "剩余电量：{capacity}%\n充 放 电 ：{power}\n可用时间：{timeTo}\n---\n电池健康度：{health}%",
   },
   //时钟
@@ -76,7 +87,13 @@
     "format-ethernet": "{icon}",
     "format-icons": {
       "disconnected": "󰤮",
-      "wifi": ["󰤯", "󰤟", "󰤢", "󰤥", "󰤨"],
+      "wifi": [
+        "󰤯",
+        "󰤟",
+        "󰤢",
+        "󰤥",
+        "󰤨"
+      ],
       "ethernet": "󰈀",
     },
     //鼠标悬浮在wifi图标上会显示wifi名称、信号强度、ip地址、设备名
@@ -158,7 +175,12 @@
       "headset": "",
       "bluetooth": "",
       // "speaker":"󰓃"
-      "speaker": ["", "", ""],
+      "speaker": [
+        "",
+        "",
+        ""
+      ],
+      "default": "",
     },
     "on-click": "wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle",
     "on-click-right": "wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle",
@@ -242,7 +264,17 @@
   "backlight": {
     "tooltip": true,
     "format": "{icon}",
-    "format-icons": ["", "", "", "", "", "", "", "", ""],
+    "format-icons": [
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
     "tooltip-format":"内屏亮度"
   },
   //调节外接屏幕亮度
