@@ -10,6 +10,7 @@ if env | grep -q "zh_CN"; then
     MSG_CLEAN_FAIL="错误：清理失败"
     MSG_SAVE_OK="已快速存档"
     MSG_SAVE_FAIL="错误：存档失败"
+    MSG_PERMISSION_ERR="错误：存档失败，权限异常"
 else
     MSG_NO_ROOT="ERROR: Snapper config for '/' not found."
     MSG_CONF_MISSING="Config file missing: "
@@ -17,6 +18,7 @@ else
     MSG_CLEAN_FAIL="ERROR: Clean process failed."
     MSG_SAVE_OK="Quicksaved."
     MSG_SAVE_FAIL="ERROR: Quicksave failed."
+    MSG_PERMISSION_ERR="ERROR: Quicksave failed due to permission issues."
 fi
 
 # ==============================================================================
@@ -58,6 +60,10 @@ shift $((OPTIND -1))
 ROOT_CONF_NAME=$(snapper list-configs | awk '$3 == "/" {print $1}')
 HOME_CONF_NAME=$(snapper list-configs | awk '$3 == "/home" {print $1}')
 
+TARGETS=("$ROOT_CONF_NAME")
+[ -n "$HOME_CONF_NAME" ] && TARGETS+=("$HOME_CONF_NAME")
+
+
 if [ -z "$ROOT_CONF_NAME" ]; then
     notify-send -u critical "$MSG_NO_ROOT"
     exit 1
@@ -66,22 +72,25 @@ fi
 # ==============================================================================
 # 4. 智能权限检查与修复
 # ==============================================================================
-ROOT_CONF_FILE="/etc/snapper/configs/$ROOT_CONF_NAME"
-
-if [ -f "$ROOT_CONF_FILE" ]; then
-    if ! snapper -c "$ROOT_CONF_NAME" get-config >/dev/null 2>&1; then
-        pkexec snapper -c "$ROOT_CONF_NAME" set-config ALLOW_GROUPS="wheel" NUMBER_LIMIT=10 NUMBER_MIN_AGE=0
+for conf in "${TARGETS[@]}"; do
+    # 验证 TARGETS 中每个配置是否存在（空名或配置文件缺失则报错并退出）
+    CONF_FILE="/etc/snapper/configs/$conf"
+    if [ ! -f "$CONF_FILE" ]; then
+        notify-send -u critical "$MSG_CONF_MISSING $CONF_FILE"
+        exit 1
     fi
-else
-    notify-send -u critical "$MSG_CONF_MISSING $ROOT_CONF_FILE"
-    exit 1
-fi
+    # 尝试读取配置，若失败则尝试以提升权限修复配置
+    if ! snapper -c "$conf" get-config >/dev/null 2>&1; then
+        if ! pkexec snapper -c "$conf" set-config ALLOW_GROUPS="wheel" NUMBER_LIMIT=10 NUMBER_MIN_AGE=0; then
+            notify-send -u critical "$MSG_PERMISSION_ERR"
+            exit 1
+        fi
+    fi
+done
 
 # ==============================================================================
 # 5. 执行清理
 # ==============================================================================
-TARGETS=("$ROOT_CONF_NAME")
-[ -n "$HOME_CONF_NAME" ] && TARGETS+=("$HOME_CONF_NAME")
 
 CLEAN_SUCCESS=true
 
