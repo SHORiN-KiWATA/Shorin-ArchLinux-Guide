@@ -1,0 +1,4 @@
+#!/bin/bash
+xhost +SI:localuser:root
+trap 'xhost -SI:localuser:root' EXIT
+"$@"
