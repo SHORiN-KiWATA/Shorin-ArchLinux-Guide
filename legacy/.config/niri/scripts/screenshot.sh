@@ -59,4 +59,3 @@ else
     # 5. 剪贴板变化后，管道传递给 satty
     wl-paste | satty -f -
 fi
-fi
