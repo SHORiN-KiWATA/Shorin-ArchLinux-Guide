@@ -87,7 +87,7 @@ sudo pacman -S fish
 
 ## 安装
 
-> [Niri-Getting-Started](https://yalter.github.io/niri/Getting-Started.html)
+> [Niri-Getting-Started](https://github.com/niri-wm/niri/wiki/Getting-Started)
 
 1. 安装
 
@@ -272,7 +272,7 @@ mouse {
 
 ## 重要程序
 
-> [Niri-List-of-Important_Software](https://yalter.github.io/niri/Important-Software.html) | [Niri-XWayland](https://yalter.github.io/niri/Xwayland.html)
+> [Niri-List-of-Important_Software](https://github.com/niri-wm/niri/wiki/Important-Software) | [Niri-XWayland](https://github.com/niri-wm/niri/wiki/Xwayland)
 
 1. 安装
 
