@@ -120,7 +120,7 @@ env = LC_CTYPE,en_US.UTF-8
 
 ## 显示器设置
 
-> [Hyprland-Monitors](https://wiki.hypr.land/Configuring/Monitors/)
+> [Hyprland-Monitors](https://wiki.hypr.land/0.52.0/Configuring/Monitors/)
 
 ```
 hyprctl monitors all
@@ -142,7 +142,7 @@ monitor=DP-2,2560x1440@180,1600x0,1
 
 ## 禁用鼠标加速
 
-> [Hyprland-Input](https://wiki.hypr.land/Configuring/Variables/#input)
+> [Hyprland-Input](https://wiki.hypr.land/0.52.0/Configuring/Variables/#input)
 
 ```
 vim ~/.config/hypr/hyprland.conf
@@ -162,7 +162,7 @@ input{
 
 ## xwayland 缩放问题
 
-> [Hyprland-XWayland](https://wiki.hypr.land/Configuring/XWayland/)
+> [Hyprland-XWayland](https://wiki.hypr.land/0.52.0/Configuring/XWayland/)
 
 xwayland 软件在 hyprland 会像素化，需要在 hyprland 配置文件新增 `xwayland{}`，填入 `force_zero_scaling=true`。
 
