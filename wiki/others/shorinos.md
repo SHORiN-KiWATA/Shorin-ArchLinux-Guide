@@ -131,8 +131,7 @@
         在 `repo-add` 时添加 `--sign --key <密钥 ID >` 选项对生成的数据文件进行签名
 
         ```
-         repo-add --sign --key 8ED9ABE61CDBAABAC4B6A694C9218E60C13B4BA8 shorin-arch.db.tar.zst shorin-contrib-git-r70.ac8
-        0b05-1-any.pkg.tar.zst
+         repo-add --sign --key 8ED9ABE61CDBAABAC4B6A694C9218E60C13B4BA8 shorin-arch.db.tar.zst shorin-contrib-git-r70.ac80b05-1-any.pkg.tar.zst
         ==> 正在将shorin-arch.db.tar.zst提取到临时位置…
         ==> 正在将shorin-arch.files.tar.zst提取到临时位置…
         ==> 正在添加软件包 'shorin-contrib-git-r70.ac80b05-1-any.pkg.tar.zst'

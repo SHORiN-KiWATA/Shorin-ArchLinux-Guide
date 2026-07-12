@@ -307,10 +307,11 @@ gsettings set org.gnome.desktop.interface color-scheme "prefer-light" && gsettin
 
 ## NetworkManager切换到IWD后端后使用impala联网提示operation aborted
 
-删除 `/etc/NetworkManager/system-connections` 下记忆的 WiFi，重启服务之后即可联网。
+先用 `nmcli connection show` 找到出现问题的 WiFi 连接名称，只删除该连接配置，再重启 NetworkManager。不要清空 `/etc/NetworkManager/system-connections`，该目录还可能保存静态 IP、VPN、网桥等其他连接。
 
 ```bash
-sudo rm -rf /etc/NetworkManager/system-connections/*
+nmcli connection show
+sudo nmcli connection delete "连接名称"
 sudo systemctl restart NetworkManager
 ```
 
