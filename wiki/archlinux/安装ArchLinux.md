@@ -577,9 +577,14 @@ passwd
 
    `--bootloader-id` 任意取一个启动项名字；
 
-   PS：如果是移动设备或者主板只支持默认的 EFI 路径要加上 `--removable` 选项。
+   PS：如果是移动设备或者主板只支持默认的 EFI 路径要加上 `--removable` 选项。 **建议添加此选项**
+   `--removable` 将 GRUB EFI 程序安装到 UEFI 默认后备启动路径 `/efi/EFI/BOOT/BOOTX64.EFI`
+   
+   主板恢复默认设置、更新固件、清除 EFI 启动变量，或者将系统盘移动到另一台电脑，原有的 NVRAM 启动项可能不存在。此时 EFI 分区中的 GRUB 文件仍然存在，但主板可能无法自动找到它，表现为能够识别系统盘，却无法进入 GRUB。
 
-3. 编辑 GRUB 的源文件
+   > **双系统注意：如果多个系统共用同一个 EFI 系统分区，执行前应确认 `/efi/EFI/BOOT/BOOTX64.EFI` 是否已被其他引导程序使用，避免覆盖现有的后备启动文件。**
+   
+4. 编辑 GRUB 的源文件
 
    ```bash
    vim /etc/default/grub
@@ -605,7 +610,7 @@ passwd
 
       取消最后一行 `GRUB_DISABLE_OS_PROBER=false` 的注释。
 
-4. 在 GRUB 的默认安装位置创建链接
+5. 在 GRUB 的默认安装位置创建链接
 
    ```bash
    ln -sf /efi/grub /boot/grub
@@ -613,7 +618,7 @@ passwd
 
    大多数程序会默认检测 `/boot/grub` 作为 GRUB 的安装位置，但是我们的 GRUB 在 `/efi/grub`，所以创建一个链接方便使用。
 
-5. 生成 GRUB 的配置文件
+6. 生成 GRUB 的配置文件
 
    ```bash
    grub-mkconfig -o /boot/grub/grub.cfg
