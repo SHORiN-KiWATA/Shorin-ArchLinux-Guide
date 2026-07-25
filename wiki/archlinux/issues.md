@@ -1,6 +1,7 @@
 这里是我遇到的问题以及对应的解决方案。
 
 - [efibootmgr里面有超级多启动项](#efibootmgr里面有超级多启动项)
+- [主板能识别系统盘但无法进入 GRUB](#主板能识别系统盘但无法进入-grub)
 - [KDE开机会卡住，必须重启sddm才好](#kde开机会卡住必须重启sddm才好)
 - [磁盘占用异常](#磁盘占用异常)
 - [提示没有编解码器](#提示没有编解码器)
@@ -42,6 +43,132 @@ sudo efibootmgr -b 0001 -B
 ```
 
 此处的 0001 是编号。
+
+## 主板能识别系统盘但无法进入 GRUB
+
+此问题常见于安装系统的 EFI 设置时没有添加 --removable 参数，而实际使用过程中又出现了主板恢复默认设置、更新固件、清除 EFI 启动变量，或者将系统盘移动到另一台电脑，原有的 NVRAM 启动项可能不存在等情况导致。
+
+Linux 出现问题无法进入系统基本都是引导问题，修复首先要准备一块Linux Live启动盘，建议使用 Ventoy 里面放 ArchLinux 安装介质或 Ubuntu 24.04 LTS 的 iso文件作为系统出问题时救急启动盘。
+
+### 问题现象
+
+BIOS 或 UEFI 设置界面能够识别安装 Arch Linux 的系统盘，但选择该硬盘启动后，屏幕短暂变黑，随后返回 BIOS，无法显示 GRUB 菜单。
+
+如果 EFI 系统分区中的 `grubx64.efi`、GRUB 配置文件、内核和 initramfs 仍然存在，这通常不是 Arch Linux 系统文件损坏，而是主板 UEFI NVRAM 中的 GRUB 启动项丢失或失效。
+
+常规 GRUB UEFI 安装由两部分组成：
+
+1. EFI 系统分区中的 GRUB EFI 程序，例如 `/efi/EFI/ARCH/grubx64.efi`；
+2. 主板 NVRAM 中指向该文件的 UEFI 启动项。
+
+EFI 文件存储在硬盘中，而 NVRAM 启动项存储在主板固件中。即使硬盘里的文件完整，启动项丢失后，主板也可能无法找到 GRUB。
+
+### 排查方法
+
+可以使用 Ubuntu 镜像启动 Live 环境，也可以使用 Arch Linux 安装介质启动，并确保安装介质本身以 UEFI 模式启动：
+
+    test -d /sys/firmware/efi && echo "UEFI mode" || echo "Legacy mode"
+
+如果输出 `Legacy mode`，需要重新启动并从主板启动菜单选择安装介质的 UEFI 启动项。
+
+查看当前 UEFI 启动项：
+
+    efibootmgr -v
+
+如果输出中没有 Arch Linux、GRUB 或安装时设置的 `bootloader-id`，说明对应启动项可能已经丢失。
+
+查看磁盘分区：
+
+    lsblk -f
+
+下面以本教程安装的方案([ArchLinux安装系统](./安装ArchLinux.md#手动安装))为例：
+
+- 系统盘为 `/dev/nvme0n1`；
+- EFI 系统分区为 `/dev/nvme0n1p1`；
+- Btrfs 根分区为 `/dev/nvme0n1p2`；
+- 根子卷为 `@`；
+- EFI 系统分区在系统中挂载到 `/efi`；
+- `bootloader-id` 为 `ARCH`。
+
+实际操作时需要根据自己的分区情况替换设备名。
+
+挂载系统根子卷和 EFI 系统分区：
+
+    mount -o subvol=@ /dev/nvme0n1p2 /mnt
+    mount --mkdir /dev/nvme0n1p1 /mnt/efi
+
+检查 GRUB EFI 文件：
+
+    find /mnt/efi/EFI -maxdepth 2 -type f -iname '*.efi'
+
+正常情况下应当能看到类似文件：
+
+    /mnt/efi/EFI/ARCH/grubx64.efi
+
+### EFI 文件仍然存在
+
+如果 `grubx64.efi` 仍然存在，可以直接重新创建 UEFI NVRAM 启动项：
+
+    efibootmgr --create --disk /dev/nvme0n1 --part 1 --label "Arch Linux" --loader '\EFI\ARCH\grubx64.efi'
+
+参数说明：
+
+`--disk` 指定 EFI 系统分区所在的硬盘；
+
+`--part` 指定 EFI 系统分区在该硬盘上的分区编号；
+
+`--label` 设置 UEFI 启动菜单中显示的名称；
+
+`--loader` 指定 GRUB EFI 程序在 EFI 系统分区中的路径。
+
+再次检查：
+
+    efibootmgr -v
+
+应当能看到类似内容：
+
+    Boot0006* Arch Linux HD(...)File(\EFI\ARCH\grubx64.efi)
+
+其中启动项编号不一定是 `0006`。
+
+可以将新启动项设置为仅在下一次启动时使用：
+
+    efibootmgr --bootnext 0006
+
+将 `0006` 替换为实际生成的启动项编号，然后重新启动测试：
+
+    reboot
+
+### EFI 文件丢失或无法正常加载
+
+如果 `/EFI/ARCH/grubx64.efi` 不存在，或者重新创建启动项后仍无法加载 GRUB，则进入已安装的 Arch Linux 系统环境重新安装 GRUB：
+
+    arch-chroot /mnt
+
+重新执行常规安装：
+
+    grub-install --target=x86_64-efi --efi-directory=/efi --boot-directory=/efi --bootloader-id=ARCH
+
+同时安装 UEFI 默认后备启动入口：
+
+    grub-install --target=x86_64-efi --efi-directory=/efi --boot-directory=/efi --removable --no-nvram
+
+重新生成 GRUB 配置：
+
+    grub-mkconfig -o /boot/grub/grub.cfg
+
+检查两个 EFI 程序是否存在：
+
+    ls -l /efi/EFI/ARCH/grubx64.efi
+    ls -l /efi/EFI/BOOT/BOOTX64.EFI
+
+退出 chroot 并重新启动：
+
+    exit
+    reboot
+
+正常情况下，主板优先使用 NVRAM 中的 Arch Linux 启动项。该启动项再次丢失时，可以在主板启动菜单中选择系统盘本身，由固件尝试加载默认后备路径 `/EFI/BOOT/BOOTX64.EFI`。
+
 
 ## KDE开机会卡住，必须重启sddm才好
 
