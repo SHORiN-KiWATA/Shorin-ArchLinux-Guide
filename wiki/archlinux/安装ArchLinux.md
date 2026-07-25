@@ -584,7 +584,7 @@ passwd
 
    > **双系统注意：如果多个系统共用同一个 EFI 系统分区，执行前应确认 `/efi/EFI/BOOT/BOOTX64.EFI` 是否已被其他引导程序使用，避免覆盖现有的后备启动文件。**
    
-4. 编辑 GRUB 的源文件
+3. 编辑 GRUB 的源文件
 
    ```bash
    vim /etc/default/grub
@@ -610,7 +610,7 @@ passwd
 
       取消最后一行 `GRUB_DISABLE_OS_PROBER=false` 的注释。
 
-5. 在 GRUB 的默认安装位置创建链接
+4. 在 GRUB 的默认安装位置创建链接
 
    ```bash
    ln -sf /efi/grub /boot/grub
@@ -618,7 +618,7 @@ passwd
 
    大多数程序会默认检测 `/boot/grub` 作为 GRUB 的安装位置，但是我们的 GRUB 在 `/efi/grub`，所以创建一个链接方便使用。
 
-6. 生成 GRUB 的配置文件
+5. 生成 GRUB 的配置文件
 
    ```bash
    grub-mkconfig -o /boot/grub/grub.cfg
