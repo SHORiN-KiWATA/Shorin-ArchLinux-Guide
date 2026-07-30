@@ -24,7 +24,7 @@ AI Agent 可以简单理解为以 AI 为“大脑”，配备一系列工具， 
     Arch 系可以直接从包管理器安装。
 
     ```
-    suod pacman -S opencode
+    sudo pacman -S opencode
     ```
     >Arch 系也可以试试从 AUR 安装 [Miyu](https://ithub.global.ssl.fastly.net/SHORiN-KiWATA/Miyu)，这是我自己的项目。
 
