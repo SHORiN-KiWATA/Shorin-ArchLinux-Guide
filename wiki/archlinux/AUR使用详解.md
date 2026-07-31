@@ -170,8 +170,8 @@ paru -S linuxqq-nt-bwrap
 # 网易云音乐
 paru -S netease-cloud-music-gtk
 
-# 科学上网相关工具
-paru -S clash-verge-rev
+# 科学上网（flclash，官方仓库直装，详见"代理"章节）
+sudo pacman -S flclash
 
 # 视频下载
 paru -S yt-dlp
