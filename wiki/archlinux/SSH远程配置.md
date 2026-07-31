@@ -39,11 +39,11 @@ scp 本地文件 用户名@IP:目标路径
 ssh -L 8080:localhost:8080 用户名@IP
 ```
 
-## 四、配置文件 `~/.ssh/config`
+## 四、配置文件 ~/.ssh/config
 
 常用连接写入配置后，只需 `ssh 别名`：
 
-```
+```ini
 Host my-server
     HostName 192.168.1.100
     User arch
@@ -74,7 +74,7 @@ Port 2222
 sudo systemctl restart sshd
 ```
 
-> 修改端口前确保防火墙放行新端口（见"玩游戏"章节的 ufw 用法）。
+> 修改端口前确保防火墙放行新端口（ufw 用法见[玩游戏](玩游戏.md)章节）。
 
 ### 5.3 检查登录日志
 
@@ -83,7 +83,7 @@ sudo systemctl restart sshd
 journalctl -u sshd | grep "Failed password"
 
 # 实时查看登录
-sudo tail -f /var/log/auth.log
+journalctl -u sshd -f
 ```
 
 ## 六、常见问题

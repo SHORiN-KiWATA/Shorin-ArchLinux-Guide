@@ -138,8 +138,12 @@ paru -G 软件名 && cd 软件名 && cat PKGBUILD
 ### 5.4 自查是否中招
 
 ```bash
-# 社区检测脚本（对照已知被投毒包列表）
-git clone https://github.com/lenucksi/aur-malware-check && cd aur-malware-check && ./check.sh
+# 社区检测工具（对照已投毒包列表扫描，需 Python 3.14+）
+git clone https://github.com/lenucksi/aur-malware-check && cd aur-malware-check
+python -m aur_check
+
+# 全量扫描（含 systemd、eBPF、npm/bun 缓存）
+python -m aur_check --full
 
 # 手动检查投毒特征
 sudo grep -r "atomic-lockfile\|js-digest" /var/cache /etc/systemd/system ~/.config/systemd/user 2>/dev/null
@@ -155,15 +159,12 @@ ls -la /sys/fs/bpf/   # 出现 hidden_pids / hidden_names / hidden_inodes 即为
 1. **优先选非 -git 的稳定版**：有多个同名列时（如 `foo` 和 `foo-git`），优先非 -git 版本
 2. **高分不等于安全**：多选下载量高、评论活跃、更新频繁的包；投票数/评论里有人报告异常的跳过
 3. **警惕刚解除孤儿状态的包**：AUR 页面会显示"Orphaned"标记，被新维护者接手的第一个月最危险
-4. **不要 `paru -Syu` 到一半中断**：AUR 包编译中断不会弄坏系统，但官方包部分升级会（见"故障排查总纲"）
+4. **不要 `paru -Syu` 到一半中断**：AUR 包编译中断不会弄坏系统，但官方包部分升级会（见[故障排查总纲](故障排查总纲.md)）
 
 ## 六、常用 AUR 包推荐
 
 ```bash
-# 输入法（如果不想用 ibus-rime）
-paru -S fcitx5-rime
-
-# 微信 / QQ（UOS 版，体验稳定）
+# 微信 / QQ（bwrap 版解决沙箱问题，体验稳定）
 paru -S wechat-universal-bwrap
 paru -S linuxqq-nt-bwrap
 
@@ -177,4 +178,4 @@ paru -S yt-dlp
 paru -S obs-studio
 ```
 
-> 微信/QQ 的 bwrap 版本解决了沙箱问题，如果某天官方包失效，去 AUR 评论区找替代方案。
+> 微信/QQ 还有 appimage 版可选（[软件安装相关](软件安装相关.md)中介绍），bwrap 版解决沙箱问题更推荐；如果某天包失效，去 AUR 评论区找替代方案。输入法（fcitx5-rime）安装与配置详见[中文输入法](中文输入法.md)，不在 AUR 重复列出。

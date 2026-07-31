@@ -1,6 +1,5 @@
 # systemd 与日志排查
 
-
 ## 一、systemctl 常用命令
 
 ```bash
@@ -48,12 +47,12 @@ journalctl --since today
 journalctl -b -1
 ```
 
-### 排错流程示例
+### 2.1 排错流程示例
 
 1. 服务启动失败：`systemctl status 服务名`，看底部红色报错
 2. 日志太多：`journalctl -u 服务名 -p 3` 只看错误级
 3. 引导阶段问题：`journalctl -xb` 后按 `/` 搜索 `error` / `fail`
-4. 仍不明确：把报错原文贴到交流群或 Arch Wiki / 搜索引擎
+4. 仍不明确：把报错原文贴到[交流群](交流群.md)或 Arch Wiki / 搜索引擎
 
 ## 三、自定义服务（定时任务 / 开机脚本）
 
