@@ -2,37 +2,37 @@
 
 > AUR（Arch User Repository）是社区维护的软件仓库，包含官方仓库没有的软件。善用 AUR 是 Arch 用户的必修课。
 
-## 一、选择 AUR 助手：yay 还是 paru
+## 一、选择 AUR 助手：推荐 paru
 
-| | yay | paru |
+| | paru | yay |
 |---|---|---|
-| 特点 | 最流行、教程最多 | 性能更好、更贴近官方 |
-| 安装 | `sudo pacman -S yay` | `sudo pacman -S paru` |
+| 特点 | **安装/升级时默认显示 PKGBUILD 变更供审查**，更适合当前投毒频发的环境 | 最流行、教程最多 |
+| 安装 | `sudo pacman -S paru` | `sudo pacman -S yay` |
 
-两者用法几乎一样，本教程以 yay 为例，paru 命令完全兼容。
+本教程以 **paru** 为例（它默认每次安装、升级都会展示 PKGBUILD 与 `.install` 的 diff，让"安装前审查"成为习惯）。yay 命令完全兼容，只需把 `paru` 换成 `yay`，但 yay 需要额外配置才显示审查界面。
 
 ```bash
-# 首次使用配置
-yay --editmenu --combinedupgrade
+# 首次使用配置（建议开启审查）
+paru --editmenu --combinedupgrade
 ```
 
 ## 二、基本用法
 
 ```bash
 # 搜索（同时搜官方仓库和 AUR）
-yay -Ss 软件名
+paru -Ss 软件名
 
-# 安装
-yay -S 软件名
+# 安装（默认会先显示 PKGBUILD 审查，回车确认）
+paru -S 软件名
 
-# 升级（AUR 包也要一起升）
-yay -Syu
+# 升级（AUR 包也要一起升，有变更同样会先展示）
+paru -Syu
 
 # 卸载
-yay -Rns 软件名
+paru -Rns 软件名
 
 # 查看已装 AUR 包
-yay -Qm
+paru -Qm
 ```
 
 ## 三、makepkg 配置优化
@@ -66,13 +66,13 @@ AUR 包编译慢的大户是 rust / node 项目，多核并行立竿见影。
 # 通常错误日志会指明缺哪个库
 
 # 2. 重新获取最新源码
-yay -S 软件名 --editmenu   # 更新 pkgver 时先更新源
+paru -S 软件名 --editmenu   # 更新 pkgver 时先更新源
 
 # 3. 查 issue 和评论
-# yay 安装时按 2 查看评论，往往有前人的解决方案
+# paru 安装时按 2 查看评论，往往有前人的解决方案
 
 # 4. 换版本重试
-yay -S 软件名@版本号
+paru -S 软件名@版本号
 ```
 
 ### 4.2 校验和不匹配
@@ -113,13 +113,13 @@ error: invalid or corrupted package (PGP signature)
 
 **结论：AUR 包安装前必须审查，尤其是刚被"收养"的孤儿包。**
 
-### 5.2 安装前审查 PKGBUILD（必做）
+### 5.2 安装前审查 PKGBUILD（paru 默认已帮你做）
+
+paru 安装和升级时**默认展示 PKGBUILD 与 `.install` 的变更（diff）**，确认前逐个看一遍即可。想看完整内容：
 
 ```bash
-# 安装时查看 PKGBUILD 全文
-yay -S --editmenu 软件名
-# 或只查看不安装
-yay -G 软件名 && cd 软件名 && cat PKGBUILD
+# 只查看不安装
+paru -G 软件名 && cd 软件名 && cat PKGBUILD
 ```
 
 重点检查四件事：
@@ -133,7 +133,7 @@ yay -G 软件名 && cd 软件名 && cat PKGBUILD
 
 ### 5.3 升级时也要审查
 
-投毒不一定发生在安装时，**升级时也可能被注入**（孤儿包被收养后第一时间改的往往是新版本）。每次 `yay -Syu` 遇到 AUR 包升级，都要留意 yay 显示的 PKGBUILD 变化。
+投毒不一定发生在安装时，**升级时也可能被注入**（孤儿包被收养后第一时间改的往往是新版本）。paru 在 `paru -Syu` 时会自动展示 AUR 包的 PKGBUILD 变更，**每次都认真看**，新增的 `npm install` / `curl` 行出现即停手。
 
 ### 5.4 自查是否中招
 
@@ -155,29 +155,29 @@ ls -la /sys/fs/bpf/   # 出现 hidden_pids / hidden_names / hidden_inodes 即为
 1. **优先选非 -git 的稳定版**：有多个同名列时（如 `foo` 和 `foo-git`），优先非 -git 版本
 2. **高分不等于安全**：多选下载量高、评论活跃、更新频繁的包；投票数/评论里有人报告异常的跳过
 3. **警惕刚解除孤儿状态的包**：AUR 页面会显示"Orphaned"标记，被新维护者接手的第一个月最危险
-4. **不要 `yay -Syu` 到一半中断**：AUR 包编译中断不会弄坏系统，但官方包部分升级会（见"故障排查总纲"）
+4. **不要 `paru -Syu` 到一半中断**：AUR 包编译中断不会弄坏系统，但官方包部分升级会（见"故障排查总纲"）
 
 ## 六、常用 AUR 包推荐
 
 ```bash
 # 输入法（如果不想用 ibus-rime）
-yay -S fcitx5-rime
+paru -S fcitx5-rime
 
 # 微信 / QQ（UOS 版，体验稳定）
-yay -S wechat-universal-bwrap
-yay -S linuxqq-nt-bwrap
+paru -S wechat-universal-bwrap
+paru -S linuxqq-nt-bwrap
 
 # 网易云音乐
-yay -S netease-cloud-music-gtk
+paru -S netease-cloud-music-gtk
 
 # 科学上网相关工具
-yay -S clash-verge-rev
+paru -S clash-verge-rev
 
 # 视频下载
-yay -S yt-dlp
+paru -S yt-dlp
 
 # 屏幕录制
-yay -S obs-studio
+paru -S obs-studio
 ```
 
 > 微信/QQ 的 bwrap 版本解决了沙箱问题，如果某天官方包失效，去 AUR 评论区找替代方案。
