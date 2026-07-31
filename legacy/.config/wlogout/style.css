@@ -1,0 +1,53 @@
+@import "colors.css";
+
+* {
+	background-image: none;
+	box-shadow: none;
+}
+
+window {
+	background-color: alpha(@surface, 0.8);
+}
+
+button {
+    border-radius: 15px;
+    border-color: black;
+	margin: 20px;
+	text-decoration-color: @outline;
+    color: @on_surface;
+	background-color: @surface_container;
+	border-style: solid;
+	border-width: 1px;
+	background-repeat: no-repeat;
+	background-position: center;
+	background-size: 25%;
+}
+
+button:focus, button:active, button:hover {
+	background-color: @secondary_container;
+	outline-style: none;
+}
+
+#lock {
+    background-image: image(url("../../.config/wlogout/icons/lock.png"));
+}
+
+#logout {
+    background-image: image(url("../../.config/wlogout/icons/logout.png"));
+}
+
+#suspend {
+    background-image: image(url("../../.config/wlogout/icons/suspend.png"));
+}
+
+#hibernate {
+    background-image: image(url("../../.config/wlogout/icons/hibernate.png"));
+}
+
+#shutdown {
+    background-image: image(url("../../.config/wlogout/icons/shutdown.png"));
+}
+
+#reboot {
+    background-image: image(url("../../.config/wlogout/icons/reboot.png"));
+}

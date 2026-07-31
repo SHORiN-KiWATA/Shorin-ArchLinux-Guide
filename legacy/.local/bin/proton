@@ -1,0 +1,944 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+DEFAULT_PREFIX="${PROTON_PREFIX:-$HOME/.proton}"
+XDG_DATA_HOME_VALUE="${XDG_DATA_HOME:-$HOME/.local/share}"
+LOCAL_RUNNER_DIR="$XDG_DATA_HOME_VALUE/proton/runners"
+STEAM_ROOT="${STEAM_COMPAT_CLIENT_INSTALL_PATH:-$HOME/.steam/root}"
+
+ACTION=""
+PRODUCT=""
+VERSION="latest"
+PREFIX="$DEFAULT_PREFIX"
+RUNNER_ARG="${PROTON_RUNNER:-}"
+DOWNLOAD_DIR=""
+INSTALL_DIR=""
+INSTALL_TO="local"
+CLEAN=0
+TARGET=""
+TARGET_ARGS=()
+LANG_OVERRIDE="${PROTON_LANG:-}"
+
+RUNNER_TYPES=()
+RUNNER_SOURCES=()
+RUNNER_NAMES=()
+RUNNER_PATHS=()
+declare -A RUNNER_SEEN=()
+
+ui_lang() {
+  local locale="${LANG_OVERRIDE:-${LC_ALL:-${LC_MESSAGES:-${LANG:-}}}}"
+  case "${locale,,}" in
+    zh|zh_*|zh.*|zh-*) printf 'zh\n' ;;
+    *) printf 'en\n' ;;
+  esac
+}
+
+usage_en() {
+  cat <<'EOF'
+Usage:
+  proton [options] app.exe [args...]
+  proton --init [options]
+  proton --winecfg [options]
+  proton --list-runner
+  proton --status
+  proton --download ge|dw [-d DIR]
+  proton -i ge|dw [--install-to local|steam|lutris]
+
+Options:
+  -p, --prefix DIR       prefix directory, default ~/.proton
+  --runner PATH          runner path
+  -d, --directory DIR    download directory
+  -i, --install ge|dw    download and install a runner
+  --install-to TARGET    local, steam, or lutris
+  --version VERSION      release tag, default latest
+  --lang zh|en           override help/status language
+  --help-full            detailed help
+
+Examples:
+  proton game.exe
+  proton -p ~/Games/game-prefix game.exe
+  proton --download ge
+  proton -i dw --install-to lutris
+EOF
+}
+
+usage_zh() {
+  cat <<'EOF'
+用法:
+  proton [选项] app.exe [参数...]
+  proton --init [选项]
+  proton --winecfg [选项]
+  proton --list-runner
+  proton --status
+  proton --download ge|dw [-d 目录]
+  proton -i ge|dw [--install-to local|steam|lutris]
+
+核心选项:
+  -p, --prefix 目录      前置环境目录，默认 ~/.proton
+  --runner 路径          指定运行器
+  -d, --directory 目录   下载目录
+  -i, --install ge|dw    下载并安装运行器
+  --install-to 目标      local、steam 或 lutris
+  --version 版本         release 标签，默认 latest
+  --lang zh|en           指定帮助/状态语言
+  --help-full            显示完整说明
+
+示例:
+  proton game.exe
+  proton -p ~/Games/game-prefix game.exe
+  proton --download ge
+  proton -i dw --install-to lutris
+EOF
+}
+
+usage_full_en() {
+  cat <<'EOF'
+Concepts:
+  prefix   Compatibility data directory. The actual Wine pfx is prefix/pfx.
+  runner   Proton or Wine runtime used to run Windows executables.
+
+Run:
+  proton app.exe [args...]
+  proton -p ~/Games/game-prefix app.exe
+  proton --runner /path/to/proton app.exe
+
+Prefix tools:
+  proton --init [-p DIR] [--runner PATH]
+  proton --winecfg [-p DIR] [--runner PATH]
+  proton --status [-p DIR] [--runner PATH]
+
+Runner discovery:
+  proton --list-runner
+
+Download only:
+  proton --download ge [-d DIR] [--version TAG]
+  proton --download dw [-d DIR] [--version TAG]
+
+Install runner:
+  proton -i ge [-d DIR] [--install-to local|steam|lutris]
+  proton -i dw [-d DIR] [--install-dir DIR]
+
+Install targets:
+  local   ~/.local/share/proton/runners
+  steam   ~/.local/share/Steam/compatibilitytools.d
+  lutris  ~/.local/share/lutris/runners/wine
+
+Environment:
+  PROTON_PREFIX=/path/to/prefix
+  PROTON_RUNNER=/path/to/runner
+  PROTON_LANG=zh|en
+EOF
+}
+
+usage_full_zh() {
+  cat <<'EOF'
+术语:
+  prefix   前置环境目录，实际 Wine 环境在 prefix/pfx。
+  runner   运行器，可以是 Proton 或 Wine。
+
+运行:
+  proton app.exe [参数...]
+  proton -p ~/Games/game-prefix app.exe
+  proton --runner /path/to/proton app.exe
+
+前置环境:
+  proton --init [-p 目录] [--runner 路径]
+  proton --winecfg [-p 目录] [--runner 路径]
+  proton --status [-p 目录] [--runner 路径]
+
+运行器发现:
+  proton --list-runner
+
+只下载:
+  proton --download ge [-d 目录] [--version 标签]
+  proton --download dw [-d 目录] [--version 标签]
+
+安装运行器:
+  proton -i ge [-d 目录] [--install-to local|steam|lutris]
+  proton -i dw [-d 目录] [--install-dir 目录]
+
+安装目标:
+  local   ~/.local/share/proton/runners
+  steam   ~/.local/share/Steam/compatibilitytools.d
+  lutris  ~/.local/share/lutris/runners/wine
+
+环境变量:
+  PROTON_PREFIX=/path/to/prefix
+  PROTON_RUNNER=/path/to/runner
+  PROTON_LANG=zh|en
+EOF
+}
+
+usage() {
+  if [[ "$(ui_lang)" == "zh" ]]; then
+    usage_zh
+  else
+    usage_en
+  fi
+}
+
+usage_full() {
+  if [[ "$(ui_lang)" == "zh" ]]; then
+    usage_full_zh
+  else
+    usage_full_en
+  fi
+}
+
+die() {
+  printf 'proton: %s\n' "$*" >&2
+  exit 1
+}
+
+expand_path() {
+  local path="$1"
+  case "$path" in
+    "~") printf '%s\n' "$HOME" ;;
+    "~/"*) printf '%s\n' "$HOME/${path#~/}" ;;
+    *) realpath -m "$path" ;;
+  esac
+}
+
+xdg_download_dir() {
+  local value line config
+  if command -v xdg-user-dir >/dev/null 2>&1; then
+    value="$(xdg-user-dir DOWNLOAD 2>/dev/null || true)"
+    if [[ -n "$value" ]]; then
+      expand_path "$value"
+      return 0
+    fi
+  fi
+
+  config="${XDG_CONFIG_HOME:-$HOME/.config}/user-dirs.dirs"
+  if [[ -r "$config" ]]; then
+    while IFS= read -r line; do
+      if [[ "$line" =~ ^XDG_DOWNLOAD_DIR=\"(.*)\"$ ]]; then
+        value="${BASH_REMATCH[1]}"
+        value="${value//\$HOME/$HOME}"
+        expand_path "$value"
+        return 0
+      fi
+    done < "$config"
+  fi
+
+  printf '%s\n' "$HOME/Downloads"
+}
+
+steam_root_dir() {
+  if [[ -d "$STEAM_ROOT" ]]; then
+    expand_path "$STEAM_ROOT"
+  elif [[ -d "$HOME/.local/share/Steam" ]]; then
+    printf '%s\n' "$HOME/.local/share/Steam"
+  else
+    expand_path "$STEAM_ROOT"
+  fi
+}
+
+default_install_dir() {
+  case "$INSTALL_TO" in
+    local)
+      printf '%s\n' "$LOCAL_RUNNER_DIR"
+      ;;
+    steam)
+      printf '%s\n' "$HOME/.local/share/Steam/compatibilitytools.d"
+      ;;
+    lutris)
+      printf '%s\n' "$HOME/.local/share/lutris/runners/wine"
+      ;;
+    *)
+      die "unknown install target: $INSTALL_TO"
+      ;;
+  esac
+}
+
+runner_name_from_path() {
+  local type="$1" path="$2" root
+  if [[ "$type" == "proton" ]]; then
+    basename "$(dirname "$path")"
+    return 0
+  fi
+
+  root="$(dirname "$path")"
+  if [[ "$(basename "$root")" == "bin" ]]; then
+    root="$(dirname "$root")"
+  fi
+  if [[ "$(basename "$root")" == "files" ]]; then
+    root="$(dirname "$root")"
+  fi
+  basename "$root"
+}
+
+wine_root_has_proton() {
+  local path="$1" root
+  root="$(dirname "$path")"
+  if [[ "$(basename "$root")" == "bin" ]]; then
+    root="$(dirname "$root")"
+  fi
+  if [[ "$(basename "$root")" == "files" ]]; then
+    root="$(dirname "$root")"
+  fi
+  [[ -x "$root/proton" ]]
+}
+
+reset_runners() {
+  RUNNER_TYPES=()
+  RUNNER_SOURCES=()
+  RUNNER_NAMES=()
+  RUNNER_PATHS=()
+  RUNNER_SEEN=()
+}
+
+add_runner() {
+  local type="$1" source="$2" path="$3" name real
+  [[ -x "$path" ]] || return 0
+
+  real="$(realpath -m "$path")"
+  [[ -n "${RUNNER_SEEN[$real]:-}" ]] && return 0
+  RUNNER_SEEN["$real"]=1
+
+  name="$(runner_name_from_path "$type" "$path")"
+  RUNNER_TYPES+=("$type")
+  RUNNER_SOURCES+=("$source")
+  RUNNER_NAMES+=("$name")
+  RUNNER_PATHS+=("$real")
+}
+
+add_proton_paths() {
+  local source="$1" path
+  shift || true
+  for path in "$@"; do
+    add_runner proton "$source" "$path"
+  done
+}
+
+add_wine_paths() {
+  local source="$1" path
+  shift || true
+  for path in "$@"; do
+    if ! wine_root_has_proton "$path"; then
+      add_runner wine "$source" "$path"
+    fi
+  done
+}
+
+read_steam_libraries() {
+  local file line lib
+  for file in \
+    "$HOME/.local/share/Steam/steamapps/libraryfolders.vdf" \
+    "$HOME/.steam/root/steamapps/libraryfolders.vdf"; do
+    [[ -r "$file" ]] || continue
+    while IFS= read -r line; do
+      if [[ "$line" =~ \"path\"[[:space:]]+\"([^\"]+)\" ]]; then
+        lib="${BASH_REMATCH[1]}"
+        expand_path "$lib"
+      fi
+    done < "$file"
+  done
+}
+
+collect_runners() {
+  local lib
+  reset_runners
+
+  if [[ -n "${PROTON_RUNNER:-}" ]]; then
+    try_resolve_runner_arg "$PROTON_RUNNER" >/dev/null 2>&1 || true
+    if [[ -n "${RESOLVED_RUNNER_PATH:-}" ]]; then
+      add_runner "$RESOLVED_RUNNER_TYPE" env "$RESOLVED_RUNNER_PATH"
+    fi
+  fi
+
+  if [[ -n "${PROTON_GE_PATH:-}" ]]; then
+    try_resolve_runner_arg "$PROTON_GE_PATH" >/dev/null 2>&1 || true
+    if [[ -n "${RESOLVED_RUNNER_PATH:-}" ]]; then
+      add_runner "$RESOLVED_RUNNER_TYPE" env "$RESOLVED_RUNNER_PATH"
+    fi
+  fi
+
+  shopt -s nullglob
+  add_proton_paths local "$LOCAL_RUNNER_DIR"/*/proton
+
+  add_proton_paths steam-compat \
+    "$HOME/.local/share/Steam/compatibilitytools.d/Proton-GE Latest/proton" \
+    "$HOME/.steam/root/compatibilitytools.d/Proton-GE Latest/proton" \
+    "$HOME/.local/share/Steam/compatibilitytools.d/DW-Proton Latest/proton" \
+    "$HOME/.steam/root/compatibilitytools.d/DW-Proton Latest/proton"
+  add_proton_paths steam-compat \
+    "$HOME/.local/share/Steam/compatibilitytools.d"/*/proton \
+    "$HOME/.steam/root/compatibilitytools.d"/*/proton
+
+  add_proton_paths lutris \
+    "$HOME/.local/share/lutris/runners/proton"/*/proton \
+    "$HOME/.local/share/lutris/runners/wine"/*/proton \
+    "$HOME/.var/app/net.lutris.Lutris/data/lutris/runners/proton"/*/proton \
+    "$HOME/.var/app/net.lutris.Lutris/data/lutris/runners/wine"/*/proton
+
+  add_proton_paths steam-official \
+    "$HOME/.local/share/Steam/steamapps/common/Proton - Experimental/proton" \
+    "$HOME/.steam/root/steamapps/common/Proton - Experimental/proton"
+  add_proton_paths steam-official \
+    "$HOME/.local/share/Steam/steamapps/common"/Proton*/proton \
+    "$HOME/.steam/root/steamapps/common"/Proton*/proton
+
+  while IFS= read -r lib; do
+    [[ -n "$lib" ]] || continue
+    add_proton_paths steam-library "$lib/steamapps/common"/Proton*/proton
+  done < <(read_steam_libraries)
+
+  add_wine_paths lutris-wine \
+    "$HOME/.local/share/lutris/runners/wine"/*/files/bin/wine \
+    "$HOME/.local/share/lutris/runners/wine"/*/bin/wine \
+    "$HOME/.var/app/net.lutris.Lutris/data/lutris/runners/wine"/*/files/bin/wine \
+    "$HOME/.var/app/net.lutris.Lutris/data/lutris/runners/wine"/*/bin/wine
+  shopt -u nullglob
+}
+
+RESOLVED_RUNNER_TYPE=""
+RESOLVED_RUNNER_PATH=""
+
+try_resolve_runner_arg() {
+  local input path base root
+  input="$1"
+  path="$(expand_path "$input")"
+  RESOLVED_RUNNER_TYPE=""
+  RESOLVED_RUNNER_PATH=""
+
+  if [[ -d "$path" && -x "$path/proton" ]]; then
+    RESOLVED_RUNNER_TYPE="proton"
+    RESOLVED_RUNNER_PATH="$(realpath -m "$path/proton")"
+    return 0
+  fi
+
+  if [[ -f "$path" && -x "$path" ]]; then
+    base="$(basename "$path")"
+    if [[ "$base" == "proton" ]]; then
+      RESOLVED_RUNNER_TYPE="proton"
+      RESOLVED_RUNNER_PATH="$(realpath -m "$path")"
+      return 0
+    fi
+    if [[ "$base" == "wine" || "$base" == "wine64" ]]; then
+      RESOLVED_RUNNER_TYPE="wine"
+      RESOLVED_RUNNER_PATH="$(realpath -m "$path")"
+      return 0
+    fi
+  fi
+
+  if [[ -d "$path" ]]; then
+    for root in "$path/files/bin/wine" "$path/bin/wine"; do
+      if [[ -x "$root" ]]; then
+        RESOLVED_RUNNER_TYPE="wine"
+        RESOLVED_RUNNER_PATH="$(realpath -m "$root")"
+        return 0
+      fi
+    done
+  fi
+
+  return 1
+}
+
+resolve_runner_arg() {
+  try_resolve_runner_arg "$1" || die "runner not found or unsupported: $1"
+}
+
+try_select_runner() {
+  if [[ -n "$RUNNER_ARG" ]]; then
+    try_resolve_runner_arg "$RUNNER_ARG"
+    return $?
+  fi
+
+  collect_runners
+  if [[ ${#RUNNER_PATHS[@]} -eq 0 ]]; then
+    return 1
+  fi
+
+  RESOLVED_RUNNER_TYPE="${RUNNER_TYPES[0]}"
+  RESOLVED_RUNNER_PATH="${RUNNER_PATHS[0]}"
+  return 0
+}
+
+select_runner() {
+  try_select_runner || die "no Proton or Wine runner found. Use --runner PATH, or install one with proton -i ge"
+}
+
+list_runners() {
+  local selected_path mark i
+  collect_runners
+
+  selected_path=""
+  if [[ -n "$RUNNER_ARG" ]]; then
+    resolve_runner_arg "$RUNNER_ARG"
+    selected_path="$(realpath -m "$RESOLVED_RUNNER_PATH")"
+  elif [[ ${#RUNNER_PATHS[@]} -gt 0 ]]; then
+    selected_path="${RUNNER_PATHS[0]}"
+  fi
+
+  if [[ ${#RUNNER_PATHS[@]} -eq 0 ]]; then
+    printf 'No runners found.\n'
+    return 0
+  fi
+
+  for i in "${!RUNNER_PATHS[@]}"; do
+    mark=" "
+    if [[ "${RUNNER_PATHS[$i]}" == "$selected_path" ]]; then
+      mark="*"
+    fi
+    printf '%s %-7s %-14s %s\n' "$mark" "${RUNNER_TYPES[$i]}" "${RUNNER_SOURCES[$i]}" "${RUNNER_NAMES[$i]}"
+    printf '  %s\n' "${RUNNER_PATHS[$i]}"
+  done
+}
+
+normalize_product() {
+  local product="${1,,}"
+  case "$product" in
+    ge|ge-proton|proton-ge)
+      printf 'ge\n'
+      ;;
+    dw|dwproton|dw-proton|dw_proton)
+      printf 'dw\n'
+      ;;
+    *)
+      die "unknown runner product: $1"
+      ;;
+  esac
+}
+
+release_info() {
+  local product="$1" version="$2"
+  python3 - "$product" "$version" <<'PY'
+import json
+import sys
+import urllib.request
+
+product = sys.argv[1]
+version = sys.argv[2]
+
+if product == "ge":
+    if version == "latest":
+        url = "https://api.github.com/repos/GloriousEggroll/proton-ge-custom/releases/latest"
+    else:
+        url = f"https://api.github.com/repos/GloriousEggroll/proton-ge-custom/releases/tags/{version}"
+    archive_suffixes = (".tar.gz",)
+    checksum_suffix = ".sha512sum"
+elif product == "dw":
+    if version == "latest":
+        url = "https://dawn.wine/api/v1/repos/dawn-winery/dwproton/releases/latest"
+    else:
+        url = f"https://dawn.wine/api/v1/repos/dawn-winery/dwproton/releases/tags/{version}"
+    archive_suffixes = ("x86_64.tar.xz",)
+    checksum_suffix = "x86_64.sha512sum"
+else:
+    raise SystemExit(f"unknown product: {product}")
+
+request = urllib.request.Request(url, headers={"User-Agent": "proton-cli"})
+with urllib.request.urlopen(request, timeout=30) as response:
+    data = json.load(response)
+
+assets = data.get("assets") or []
+tag = data.get("tag_name") or data.get("name") or version
+archive = None
+checksum = None
+
+for asset in assets:
+    name = asset.get("name", "")
+    download = asset.get("browser_download_url", "")
+    if not download:
+        continue
+    if archive is None and any(name.endswith(suffix) for suffix in archive_suffixes):
+        archive = (name, download)
+    if checksum is None and name.endswith(checksum_suffix):
+        checksum = (name, download)
+
+if archive is None:
+    raise SystemExit(f"archive asset not found for {product} {version}")
+if checksum is None:
+    raise SystemExit(f"checksum asset not found for {product} {version}")
+
+print(tag)
+print(archive[0])
+print(archive[1])
+print(checksum[0])
+print(checksum[1])
+PY
+}
+
+fetch_file() {
+  local url="$1" dest="$2" tmp
+  if [[ -s "$dest" ]]; then
+    printf 'Using existing: %s\n' "$dest"
+    return 0
+  fi
+
+  tmp="$dest.part"
+  rm -f "$tmp"
+  if command -v curl >/dev/null 2>&1; then
+    curl -L --fail --progress-bar -o "$tmp" "$url"
+  elif command -v wget >/dev/null 2>&1; then
+    wget -O "$tmp" "$url"
+  else
+    die "curl or wget is required for downloads"
+  fi
+  mv "$tmp" "$dest"
+}
+
+verify_archive() {
+  local dir="$1" checksum_name="$2"
+  (cd "$dir" && sha512sum -c "$checksum_name")
+}
+
+find_extracted_runner_root() {
+  local extract_dir="$1" path
+  if [[ -x "$extract_dir/proton" ]]; then
+    printf '%s\n' "$extract_dir"
+    return 0
+  fi
+
+  shopt -s nullglob
+  for path in "$extract_dir"/*; do
+    if [[ -d "$path" && -x "$path/proton" ]]; then
+      shopt -u nullglob
+      printf '%s\n' "$path"
+      return 0
+    fi
+  done
+  shopt -u nullglob
+
+  return 1
+}
+
+download_runner() {
+  local product info tag archive_name archive_url checksum_name checksum_url dir
+  product="$(normalize_product "$PRODUCT")"
+  mapfile -t info < <(release_info "$product" "$VERSION")
+  tag="${info[0]}"
+  archive_name="${info[1]}"
+  archive_url="${info[2]}"
+  checksum_name="${info[3]}"
+  checksum_url="${info[4]}"
+  dir="$(expand_path "${DOWNLOAD_DIR:-$(xdg_download_dir)}")"
+
+  mkdir -p "$dir"
+  fetch_file "$archive_url" "$dir/$archive_name"
+  fetch_file "$checksum_url" "$dir/$checksum_name"
+  verify_archive "$dir" "$checksum_name"
+
+  printf 'Downloaded: %s\n' "$dir/$archive_name"
+  printf 'Checksum:   %s\n' "$dir/$checksum_name"
+  printf 'Verified:   yes\n'
+  printf 'Version:    %s\n' "$tag"
+}
+
+install_runner() {
+  local product info tag archive_name archive_url checksum_name checksum_url download_dir install_dir work_dir use_existing extract_dir root target temp_download_dir
+  product="$(normalize_product "$PRODUCT")"
+  mapfile -t info < <(release_info "$product" "$VERSION")
+  tag="${info[0]}"
+  archive_name="${info[1]}"
+  archive_url="${info[2]}"
+  checksum_name="${info[3]}"
+  checksum_url="${info[4]}"
+  download_dir="$(expand_path "${DOWNLOAD_DIR:-$(xdg_download_dir)}")"
+  install_dir="$(expand_path "${INSTALL_DIR:-$(default_install_dir)}")"
+  target="$install_dir/$tag"
+
+  mkdir -p "$download_dir" "$install_dir"
+
+  use_existing=0
+  if [[ -s "$download_dir/$archive_name" && -s "$download_dir/$checksum_name" ]]; then
+    work_dir="$download_dir"
+    use_existing=1
+    printf 'Using downloaded files in: %s\n' "$download_dir"
+  else
+    temp_download_dir="$(mktemp -d "$download_dir/.proton-install.XXXXXX")"
+    work_dir="$temp_download_dir"
+    fetch_file "$archive_url" "$work_dir/$archive_name"
+    fetch_file "$checksum_url" "$work_dir/$checksum_name"
+  fi
+
+  verify_archive "$work_dir" "$checksum_name"
+
+  if [[ -e "$target" ]]; then
+    if [[ -x "$target/proton" ]]; then
+      printf 'Already installed: %s\n' "$target/proton"
+      if [[ $use_existing -eq 0 ]]; then
+        rm -rf "$work_dir"
+      elif [[ $CLEAN -eq 1 ]]; then
+        rm -f "$download_dir/$archive_name" "$download_dir/$checksum_name"
+      fi
+      return 0
+    fi
+    die "install target exists but is not a runner: $target"
+  fi
+
+  extract_dir="$(mktemp -d)"
+  tar -xf "$work_dir/$archive_name" -C "$extract_dir"
+  root="$(find_extracted_runner_root "$extract_dir")" || die "extracted archive does not contain a proton runner"
+  mv "$root" "$target"
+  rm -rf "$extract_dir"
+
+  if [[ $use_existing -eq 0 ]]; then
+    rm -rf "$work_dir"
+  elif [[ $CLEAN -eq 1 ]]; then
+    rm -f "$download_dir/$archive_name" "$download_dir/$checksum_name"
+  fi
+
+  printf 'Installed: %s\n' "$target/proton"
+}
+
+run_proton_command() {
+  local runner="$1"
+  shift
+  mkdir -p "$PREFIX"
+  env \
+    STEAM_COMPAT_DATA_PATH="$PREFIX" \
+    STEAM_COMPAT_CLIENT_INSTALL_PATH="$(steam_root_dir)" \
+    SteamAppId="${SteamAppId:-0}" \
+    SteamGameId="${SteamGameId:-0}" \
+    "$runner" "$@"
+}
+
+exec_proton_command() {
+  local runner="$1"
+  shift
+  mkdir -p "$PREFIX"
+  exec env \
+    STEAM_COMPAT_DATA_PATH="$PREFIX" \
+    STEAM_COMPAT_CLIENT_INSTALL_PATH="$(steam_root_dir)" \
+    SteamAppId="${SteamAppId:-0}" \
+    SteamGameId="${SteamGameId:-0}" \
+    "$runner" "$@"
+}
+
+run_wine_command() {
+  local runner="$1"
+  shift
+  mkdir -p "$PREFIX/pfx"
+  env WINEPREFIX="$PREFIX/pfx" "$runner" "$@"
+}
+
+exec_wine_command() {
+  local runner="$1"
+  shift
+  mkdir -p "$PREFIX/pfx"
+  exec env WINEPREFIX="$PREFIX/pfx" "$runner" "$@"
+}
+
+init_prefix() {
+  select_runner
+  if [[ "$RESOLVED_RUNNER_TYPE" == "proton" ]]; then
+    run_proton_command "$RESOLVED_RUNNER_PATH" run wineboot -u
+  else
+    run_wine_command "$RESOLVED_RUNNER_PATH" wineboot -u
+  fi
+}
+
+ensure_initialized() {
+  if [[ ! -d "$PREFIX/pfx" ]]; then
+    init_prefix
+  fi
+}
+
+open_winecfg() {
+  select_runner
+  if [[ "$RESOLVED_RUNNER_TYPE" == "proton" ]]; then
+    exec_proton_command "$RESOLVED_RUNNER_PATH" run winecfg
+  else
+    exec_wine_command "$RESOLVED_RUNNER_PATH" winecfg
+  fi
+}
+
+run_target() {
+  local workdir exe
+  select_runner
+  ensure_initialized
+
+  TARGET="$(expand_path "$TARGET")"
+  [[ -e "$TARGET" ]] || die "target not found: $TARGET"
+  workdir="$(dirname "$TARGET")"
+  exe="./$(basename "$TARGET")"
+
+  cd "$workdir"
+  if [[ "$RESOLVED_RUNNER_TYPE" == "proton" ]]; then
+    exec_proton_command "$RESOLVED_RUNNER_PATH" waitforexitandrun "$exe" "${TARGET_ARGS[@]}"
+  else
+    exec_wine_command "$RESOLVED_RUNNER_PATH" "$exe" "${TARGET_ARGS[@]}"
+  fi
+}
+
+show_status() {
+  local runner_type runner_path initialized install_dir download_dir lang
+  PREFIX="$(expand_path "$PREFIX")"
+  download_dir="$(expand_path "${DOWNLOAD_DIR:-$(xdg_download_dir)}")"
+  install_dir="$(expand_path "${INSTALL_DIR:-$(default_install_dir)}")"
+  lang="$(ui_lang)"
+
+  runner_type="not found"
+  runner_path="not found"
+  if try_select_runner >/dev/null 2>&1; then
+    runner_type="$RESOLVED_RUNNER_TYPE"
+    runner_path="$RESOLVED_RUNNER_PATH"
+  fi
+
+  initialized="no"
+  if [[ -d "$PREFIX/pfx" ]]; then
+    initialized="yes"
+  fi
+
+  if [[ "$lang" == "zh" ]]; then
+    [[ "$initialized" == "yes" ]] && initialized="是" || initialized="否"
+    printf '前置环境:   %s\n' "$PREFIX"
+    printf 'PFX:        %s\n' "$PREFIX/pfx"
+    printf '已初始化:   %s\n' "$initialized"
+    printf '运行器类型: %s\n' "$runner_type"
+    printf '运行器:     %s\n' "$runner_path"
+    printf '下载目录:   %s\n' "$download_dir"
+    printf '安装目录:   %s\n' "$install_dir"
+  else
+    printf 'Prefix:      %s\n' "$PREFIX"
+    printf 'PFX:         %s\n' "$PREFIX/pfx"
+    printf 'Initialized: %s\n' "$initialized"
+    printf 'Runner type: %s\n' "$runner_type"
+    printf 'Runner:      %s\n' "$runner_path"
+    printf 'Download:    %s\n' "$download_dir"
+    printf 'Install dir: %s\n' "$install_dir"
+  fi
+}
+
+parse_args() {
+  if [[ $# -eq 0 ]]; then
+    usage
+    exit 0
+  fi
+
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      -h|--help)
+        usage
+        exit 0
+        ;;
+      --help-full)
+        usage_full
+        exit 0
+        ;;
+      --lang)
+        [[ $# -ge 2 ]] || die "$1 requires zh or en"
+        case "${2,,}" in
+          zh|en) LANG_OVERRIDE="${2,,}" ;;
+          *) die "unsupported language: $2" ;;
+        esac
+        shift 2
+        ;;
+      -p|--prefix)
+        [[ $# -ge 2 ]] || die "$1 requires a directory"
+        PREFIX="$2"
+        shift 2
+        ;;
+      --runner)
+        [[ $# -ge 2 ]] || die "$1 requires a path"
+        RUNNER_ARG="$2"
+        shift 2
+        ;;
+      -d|--directory)
+        [[ $# -ge 2 ]] || die "$1 requires a directory"
+        DOWNLOAD_DIR="$2"
+        shift 2
+        ;;
+      --install-dir)
+        [[ $# -ge 2 ]] || die "$1 requires a directory"
+        INSTALL_DIR="$2"
+        shift 2
+        ;;
+      --install-to)
+        [[ $# -ge 2 ]] || die "$1 requires a target"
+        INSTALL_TO="$2"
+        shift 2
+        ;;
+      --version)
+        [[ $# -ge 2 ]] || die "$1 requires a version"
+        VERSION="$2"
+        shift 2
+        ;;
+      --clean)
+        CLEAN=1
+        shift
+        ;;
+      --list-runner)
+        ACTION="list"
+        shift
+        ;;
+      --status)
+        ACTION="status"
+        shift
+        ;;
+      --init)
+        ACTION="init"
+        shift
+        ;;
+      --winecfg)
+        ACTION="winecfg"
+        shift
+        ;;
+      --download)
+        [[ $# -ge 2 ]] || die "$1 requires ge or dw"
+        ACTION="download"
+        PRODUCT="$2"
+        shift 2
+        ;;
+      -i|--install)
+        [[ $# -ge 2 ]] || die "$1 requires ge or dw"
+        ACTION="install"
+        PRODUCT="$2"
+        shift 2
+        ;;
+      --)
+        shift
+        [[ $# -ge 1 ]] || die "-- requires a target"
+        TARGET="$1"
+        shift
+        TARGET_ARGS=("$@")
+        break
+        ;;
+      -*)
+        die "unknown option: $1"
+        ;;
+      *)
+        if [[ -z "$ACTION" ]]; then
+          TARGET="$1"
+          shift
+          TARGET_ARGS=("$@")
+          break
+        fi
+        die "unexpected argument for $ACTION: $1"
+        ;;
+    esac
+  done
+}
+
+parse_args "$@"
+PREFIX="$(expand_path "$PREFIX")"
+
+case "$ACTION" in
+  list)
+    list_runners
+    ;;
+  status)
+    show_status
+    ;;
+  init)
+    init_prefix
+    ;;
+  winecfg)
+    open_winecfg
+    ;;
+  download)
+    download_runner
+    ;;
+  install)
+    install_runner
+    ;;
+  "")
+    [[ -n "$TARGET" ]] || die "no target provided"
+    run_target
+    ;;
+  *)
+    die "unknown action: $ACTION"
+    ;;
+esac

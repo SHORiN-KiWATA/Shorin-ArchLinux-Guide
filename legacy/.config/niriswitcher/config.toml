@@ -1,0 +1,48 @@
+separate_workspaces = true
+current_output_only = true
+double_click_to_hide = false
+center_on_focus = false
+log_level = "WARN"
+
+[appearance]
+icon_size = 128
+max_width = 800
+min_width = 600
+system_theme = "dark" # auto or light
+workspace_format = "{output}-{idx}" # {output}, {idx}, {name}
+
+[workspace]
+mru_sort_in_workspace = false
+mru_sort_across_workspace = true
+
+[appearance.animation.reveal]
+hide_duration = 200
+show_duration = 200
+easing = "ease-out-cubic"
+
+[appearance.animation.resize]
+duration = 200
+easing = "ease-in-out-cubic"
+
+[appearance.animation.workspace]
+duration = 200
+transition = "slide"
+
+[appearance.animation.switch]
+duration = 200
+easing = "ease-out-cubic"
+
+[keys]
+modifier = "Alt_L"
+
+[keys.switch]
+next = "Tab"
+prev = "Shift+Tab"
+
+[keys.window]
+close = "q"
+abort = "Escape"
+
+[keys.workspace]
+next = "grave"
+prev = "Shift+asciitilde"

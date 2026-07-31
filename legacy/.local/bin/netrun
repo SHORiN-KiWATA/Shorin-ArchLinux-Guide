@@ -1,0 +1,173 @@
+#!/bin/bash
+# netrun v14 - Pure Router with Smart Binary Extraction
+
+usage() {
+    cat <<EOF
+Usage: netrun menu       (Launch graphical Fuzzel menu)
+       netrun tui        (Launch terminal UI)
+       netrun list       (Show connected interfaces)
+       netrun <iface> <cmd...> (Run directly)
+       netrun -h         (Show this help)
+
+Env Options:
+  NETRUN_DNS=1.1.1.1     (Force a specific DNS, default is dynamic system DNS)
+EOF
+    exit 0
+}
+
+get_interfaces() {
+    ip -o link show | awk -F': ' '{print $2}' | grep -vE '^(lo|virbr|vmnet|vboxnet|docker|br-|veth|tailscale|wg|bond|dummy|ifb|sit)' | while read -r iface; do
+        ip_addr=$(ip -4 addr show "$iface" 2>/dev/null | awk '/inet / {print $2}' | cut -d/ -f1 | head -n1)
+        if [ -n "$ip_addr" ]; then
+            echo "$iface  [$ip_addr]"
+        fi
+    done
+}
+
+# 核心改进：智能剥离 env, sh 和环境变量赋值，提取真实程序名
+get_real_bin() {
+    local cmd="${1//[\"\']/}" # 先剥离掉所有的单双引号，防止 sh -c "obs" 识别错
+    for word in $cmd; do
+        # 跳过常见的包装器和参数标示符
+        if [[ "$word" =~ ^(env|sh|bash|zsh|-c)$ ]]; then continue; fi
+        # 跳过形如 VAR=value 的环境变量赋值
+        if [[ "$word" == *=* ]]; then continue; fi
+        # 此时剩下的第一个词大概率就是真实命令，剥离掉前面的路径 (/usr/bin/)
+        echo "${word##*/}"
+        return
+    done
+}
+
+declare -A APP_MAP
+
+build_app_map() {
+    # 1. 收集并去重 .desktop 文件 (完美解决 NoDisplay 本地覆盖失效问题)
+    declare -A desktop_files
+    
+    # 注意这里：我顺手把你系统里可能存在的 Flatpak 应用目录也加上了，保证不漏应用
+    for dir in \
+        /usr/share/applications \
+        /var/lib/flatpak/exports/share/applications \
+        "$HOME/.local/share/flatpak/exports/share/applications" \
+        "$HOME/.local/share/applications"; do
+        
+        [ -d "$dir" ] || continue
+        for file in "$dir"/*.desktop; do
+            [ -f "$file" ] || continue
+            # 利用 ${file##*/} 提取纯文件名（如 steam.desktop）作为哈希表的 Key
+            # 后面读取的目录（如 ~/.local）会自动覆盖前面目录的同名文件
+            desktop_files["${file##*/}"]="$file"
+        done
+    done
+
+    # 2. 遍历去重后的“最终有效”文件列表
+    for file in "${desktop_files[@]}"; do
+        
+        # 核心改进 A：区块隔离 (解决 Steam 变“商店”的问题)
+        # 用 sed 截取从 [Desktop Entry] 到下一个 [ 之间的内容，并清洗掉 \r
+        local entry_block
+        entry_block=$(sed -n '/^\[Desktop Entry\]/,/^\[/p' "$file" | tr -d '\r')
+        
+        # 因为我们已经完成了去重，现在读取的一定是你加了 NoDisplay 的那个覆盖文件
+        echo "$entry_block" | grep -qi "^[[:space:]]*NoDisplay=true" && continue
+        echo "$entry_block" | grep -qi "^[[:space:]]*Hidden=true" && continue
+
+        # 提取名字
+        local name=$(echo "$entry_block" | grep -m 1 "^Name\[zh_CN\]=" | cut -d= -f2-)
+        [ -z "$name" ] && name=$(echo "$entry_block" | grep -m 1 "^Name=" | cut -d= -f2-)
+        
+        # 提取执行命令
+        local cmd=$(echo "$entry_block" | grep -m 1 "^Exec=" | cut -d= -f2- | sed -E 's/ %[a-zA-Z]//g')
+        
+        if [ -n "$name" ] && [ -n "$cmd" ]; then
+            # 提取纯净的二进制命令名 (解决 env/sh 污染问题)
+            local bin_name=$(get_real_bin "$cmd")
+            [ -z "$bin_name" ] && bin_name="unknown"
+            
+            # 组装优雅的显示名称
+            local display_name="$name ($bin_name)"
+            
+            # 防重名覆盖机制
+            [[ -n "${APP_MAP["$display_name"]}" && "${APP_MAP["$display_name"]}" != "$cmd" ]] && display_name="$display_name - Alt"
+            
+            APP_MAP["$display_name"]="$cmd"
+        fi
+    done
+}
+
+build_firejail_args() {
+    local iface="$1"
+    FJ_ARGS=(--noprofile --net="$iface")
+    if [ -n "${NETRUN_DNS:-}" ]; then
+        FJ_ARGS+=(--dns="${NETRUN_DNS//$'\r'/}")
+    fi
+}
+
+menu() {
+    local iface_choice=$(get_interfaces | fuzzel --dmenu --prompt="Network ❯ " --lines=4 --width=45)
+    [ -z "$iface_choice" ] && exit 0
+    local iface=$(echo "$iface_choice" | awk '{print $1}')
+
+    build_app_map
+    local app_choice=$(printf "%s\n" "${!APP_MAP[@]}" | sort | fuzzel --dmenu --prompt="Run ($iface) ❯ " --width=60)
+    [ -z "$app_choice" ] && exit 0
+    local cmd="${APP_MAP["$app_choice"]}"
+    
+    notify-send "NetRun" "Routing '$app_choice' via $iface" -a "netrun" -t 3000 2>/dev/null || true
+    
+    build_firejail_args "$iface"
+    firejail "${FJ_ARGS[@]}" -- /bin/sh -c "$cmd" & disown
+    exit 0
+}
+
+tui() {
+    local iface_choice iface app_choice cmd
+
+    echo -e "\n🌐 Select Active Network Interface:"
+    if command -v fzf >/dev/null 2>&1; then
+        iface_choice=$(get_interfaces | fzf --prompt="Network > " --height=10 --layout=reverse)
+        [ -z "$iface_choice" ] && exit 0
+        iface=$(echo "$iface_choice" | awk '{print $1}')
+
+        build_app_map
+        app_choice=$(printf "%s\n" "${!APP_MAP[@]}" | sort | fzf --prompt="Run ($iface) > " --height=15 --layout=reverse)
+        [ -z "$app_choice" ] && exit 0
+        cmd="${APP_MAP["$app_choice"]}"
+    else
+        mapfile -t iface_list < <(get_interfaces)
+        [ ${#iface_list[@]} -eq 0 ] && { echo "No interfaces found."; exit 1; }
+        
+        select opt in "${iface_list[@]}"; do
+            if [ -n "$opt" ]; then
+                iface=$(echo "$opt" | awk '{print $1}')
+                break
+            fi
+        done
+        echo ""
+        read -e -p "🚀 Run command via $iface: " cmd
+        [ -z "$cmd" ] && exit 0
+    fi
+
+    echo "Launching via $iface..."
+    build_firejail_args "$iface"
+    firejail "${FJ_ARGS[@]}" -- /bin/sh -c "$cmd"
+    exit 0
+}
+
+case "${1:-}" in
+    menu) menu ;;
+    tui)  tui ;;
+    list) 
+        echo -e "\n📡 Available Connected Interfaces:"
+        get_interfaces | awk '{printf "  %-15s %s\n", $1, $2}'
+        echo ""
+        ;;
+    -h|--help|help) usage ;;
+    *)
+        [ $# -lt 2 ] && usage
+        iface="$1"
+        shift
+        build_firejail_args "$iface"
+        firejail "${FJ_ARGS[@]}" -- "$@"
+        ;;
+esac

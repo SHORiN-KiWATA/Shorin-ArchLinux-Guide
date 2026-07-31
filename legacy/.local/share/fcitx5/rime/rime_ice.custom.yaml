@@ -1,0 +1,13 @@
+patch:
+  # 1. 扩充允许输入的字符集：允许在拼音中直接输入指定的标点符号，阻止其直接上屏
+  # 这样可以在输入长句时顺畅地带上 , . ? ' ! : - 等符号，留给大模型去理解上下文
+  "speller/alphabet": "zyxwvutsrqponmlkjihgfedcba.,?'!:"
+
+  # 2. 将 Lua AI 脚本 (llm_translator) 强行插入到处理列表的第 0 位之前
+  "engine/translators/@before 0": lua_translator@llm_translator
+
+  # 3. 定义正则捕获规则：告诉 Rime 引擎，只要输入符合“小写字母开头，且仅包含字母或指定标点”的格式
+  # 就把它当成一个不可分割的整体（跳过传统拼音的音节切分），原封不动地喂给 AI 脚本处理
+  "recognizer/patterns/llm_pinyin": "^[a-z][a-z.,?'!:]*$"
+
+  "grammar/language": wanxiang-lts-zh-hans
