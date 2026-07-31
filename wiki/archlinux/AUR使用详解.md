@@ -102,9 +102,59 @@ error: invalid or corrupted package (PGP signature)
 
 ## 五、AUR 安全须知
 
-1. **安装前看 PKGBUILD**：`yay -S --editmenu 软件名`，重点检查 `source=`（源码来源）和 `install=`（安装脚本）里没有可疑内容
-2. **优先选包名后带 -git 的前一个稳定版**：有多个同名列时（如 `foo` 和 `foo-git`），优先非 -git 版本
-3. **高分不等于安全**：多选下载量高、评论活跃、更新频繁的包
+### 5.1 2026 年 Atomic Arch 投毒事件（必读）
+
+2026 年 6 月，AUR 爆发了大规模投毒事件（代号 **Atomic Arch**）：
+
+- 攻击者批量"收养"被放弃的孤儿包（包名、历史、信任度都保留），在 PKGBUILD 里插入钩子，安装时静默执行 `npm install atomic-lockfile` / `bun install js-digest`
+- 恶意 npm 包通过 `preinstall` 钩子运行内置的 Linux 恶意程序（`deps`），窃取**浏览器 Cookie 与会话、SSH 密钥、GitHub/npm token、Slack/Discord/Teams/Telegram 会话、Vault token、Docker 凭据、shell 历史**
+- 以 root 运行时还会加载 **eBPF rootkit**，隐藏自身进程和文件，常规杀毒软件根本看不到
+- 第一波约 408 个包，第二波扩大到 **1500+ 个包**；官方仓库未受影响
+
+**结论：AUR 包安装前必须审查，尤其是刚被"收养"的孤儿包。**
+
+### 5.2 安装前审查 PKGBUILD（必做）
+
+```bash
+# 安装时查看 PKGBUILD 全文
+yay -S --editmenu 软件名
+# 或只查看不安装
+yay -G 软件名 && cd 软件名 && cat PKGBUILD
+```
+
+重点检查四件事：
+
+1. **`source=`（源码来源）**：是否指向官方 GitHub/GitLab 发布页，而不是来路不明的网址或 IP
+2. **`install=` 与 `package()` 函数**：安装脚本里有没有执行额外命令
+3. **`build()` 里的钩子**：警惕 `npm install`、`pip install`、`curl ... | sh`、`wget`、`eval` 等"下载并执行"的模式（Atomic Arch 就是靠 `npm install` 投毒的）
+4. **`.install` 文件**：`.post_install` 里有没有可疑动作
+
+正常 AUR 包通常只有几行 `cd` / `make` / `install`，看到上述模式要格外警惕。
+
+### 5.3 升级时也要审查
+
+投毒不一定发生在安装时，**升级时也可能被注入**（孤儿包被收养后第一时间改的往往是新版本）。每次 `yay -Syu` 遇到 AUR 包升级，都要留意 yay 显示的 PKGBUILD 变化。
+
+### 5.4 自查是否中招
+
+```bash
+# 社区检测脚本（对照已知被投毒包列表）
+git clone https://github.com/lenucksi/aur-malware-check && cd aur-malware-check && ./check.sh
+
+# 手动检查投毒特征
+sudo grep -r "atomic-lockfile\|js-digest" /var/cache /etc/systemd/system ~/.config/systemd/user 2>/dev/null
+ls -la /sys/fs/bpf/   # 出现 hidden_pids / hidden_names / hidden_inodes 即为 rootkit 活动痕迹
+```
+
+如果确认中招：
+- **轮换所有凭据**：SSH 密钥、GitHub/npm token、云平台 API key、浏览器全部会话
+- 恶意程序以 **root 执行过则直接重装系统**：rootkit 可能藏在内核层，清不干净
+
+### 5.5 其他安全守则
+
+1. **优先选非 -git 的稳定版**：有多个同名列时（如 `foo` 和 `foo-git`），优先非 -git 版本
+2. **高分不等于安全**：多选下载量高、评论活跃、更新频繁的包；投票数/评论里有人报告异常的跳过
+3. **警惕刚解除孤儿状态的包**：AUR 页面会显示"Orphaned"标记，被新维护者接手的第一个月最危险
 4. **不要 `yay -Syu` 到一半中断**：AUR 包编译中断不会弄坏系统，但官方包部分升级会（见"故障排查总纲"）
 
 ## 六、常用 AUR 包推荐
