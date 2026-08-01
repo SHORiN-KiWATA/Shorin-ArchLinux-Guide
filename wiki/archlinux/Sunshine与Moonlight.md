@@ -2,8 +2,7 @@
 title: Arch Linux使用Sunshine+Moonlight远程串流
 summary: 记录 niri/Wayland 混合显卡环境下的游戏串流配置，以及从“主机无视频”定位到跨 GPU 画面导入失败的完整修复过程
 date: 2026-08-01
-tags: [Linux, Arch Linux, Sunshine, Moonlight, 游戏串流]
-cover: https://picsum.photos/seed/sunshine-moonlight-archlinux/1200/750
+tags: [Arch Linux, Sunshine, Moonlight, 游戏串流]
 ---
 
 ## 为什么选择 Sunshine + Moonlight
