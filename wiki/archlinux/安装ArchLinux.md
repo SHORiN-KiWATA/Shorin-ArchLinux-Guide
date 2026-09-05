@@ -473,26 +473,20 @@ arch-chroot /mnt
 
 ### 设置时区和时间
 
-设置时区：
+设置时区（chroot 环境里没有运行中的 systemd，`timedatectl` 在这里不能用，直接创建链接）：
 
-```shell
-timedatectl set-timezone Asia/Shanghai
+```bash
+ln -sf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime
+
+# ln 是 link 的缩写
+# -s 创建软链接（相对的 -h 是硬链接）
+# -f 代表强制执行
 ```
 
 同步硬件时间：
 
 ```bash
 hwclock --systohc
-```
-
-除了 `timedatectl` 命令，还可以手动创建链接。
-
-```bash
-ln -sf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime
-
-# ln 是 link 的缩写
-# -s 代表跨文件系统的软链接
-# -f 代表强制执行
 ```
 
 ### 本地化设置
@@ -868,6 +862,8 @@ cmatrix -r
    >因为 Live 环境没有中文输入法，只能用英文和 AI 交流，输入一些简单的短语就行，实在不懂的话让豆包帮忙翻译。
 
    以下是一个最小化的提示词示例，注意把 root 密码改成你自己的：
+
+   >⚠️提醒⚠️：root 密码会随提示词明文发送给你所使用的大模型服务商，安装完成进入系统后请立即用 `passwd` 修改密码。
 
    ```text
    We are in the archiso live. First, increase the cowspace size. Then auto install archlinux. Root passwd: shorin.
