@@ -7,7 +7,7 @@
    sudo pacman -S plasma-meta konsole dolphin flatpak-kcm kate firefox qt6-multimedia-ffmpeg
    ```
 
-   >`plasma-meta` 但是 KDE 自带的东西都很实用，装 meta 包就可以了。
+   >`plasma-meta` 涵盖了 KDE 自带的常用组件，它们都很实用，装 meta 包就可以了。
 
    >`konsole` 是 KDE 标配终端仿真器。
 
@@ -27,7 +27,7 @@
    sudo systemctl start plasmalogin
    ```
 
-   自 6.5 版本开始，plasma 同时提供 `sddm` 和 `plasmalogin`，推荐使用 `plasmalogin`。
+   自 6.6 版本开始，plasma 同时提供 `sddm` 和 `plasmalogin`，推荐使用 `plasmalogin`。
 
 3. 登录普通用户
 

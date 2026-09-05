@@ -120,9 +120,11 @@ gsettings set com.github.stunkymonkey.nautilus-open-any-terminal custom-local-co
    输出应该为：
 
    ```
-   ‘ghostty’
-   ‘-e’
+   'ghostty'
+   '-e'
    ```
+
+   >注意：`org.gnome.desktop.default-applications.terminal` 这个 schema 在新版 GNOME 中已被上游标记为废弃（deprecated），如果设置后不生效，属于新版 GNOME 改用了新的默认终端机制，方法一（dconf-editor）同样受此影响。
 
 ### 安装高级网络配置工具 nm-connection-editor
 

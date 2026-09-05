@@ -664,7 +664,8 @@ Niri 默认设置了一个 `Mod+Alt+L` 锁屏的快捷键，如果要修改可�
     #!/usr/bin/env bash
 
     # 5 分钟锁屏，10 分钟熄屏，20 分钟睡眠
-    # swaylock -f 是前台运行 swaylock，如果不加的话后续的 timeout 命令会不生效
+    # -f (daemonize) 让 swaylock 在锁屏后转入后台并立即返回，
+    # 不加的话 swaylock 会一直前台运行到解锁，swayidle 的后续 timeout（熄屏/睡眠）不会被触发
 
     swayidle -w \
         timeout 300  'swaylock -f' \
@@ -902,7 +903,7 @@ sudo systemctl enable --now bluetooth
 
 ## 截图
 
-Niri 自带了截图功能，不仅可以截区域，还可以截取窗口或者全屏，很好用。在配置文件搜索 `screenshot` 可以找到键位。`screenshot-path` 可以设置壁纸保存的位置和文件名模板。
+Niri 自带了截图功能，不仅可以截区域，还可以截取窗口或者全屏，很好用。在配置文件搜索 `screenshot` 可以找到键位。`screenshot-path` 可以设置截图保存的位置和文件名模板。
 
 
 
@@ -1031,7 +1032,8 @@ sudo pacman -S brightnessctl
 1. 安装
 
     ```bash
-    yay -S awww waypaper
+    sudo pacman -S awww  # awww（原 swww）已进官方 extra
+yay -S waypaper  # waypaper 仍需 AUR/archlinuxcn
     ```
 
 2. 打开 waypaper 切换壁纸
@@ -1159,9 +1161,10 @@ sudo pacman -S brightnessctl
 
          [我的 GNOME 自定义设置#调节外接屏幕亮度](我的GNOME自定义设置.md#调节外接屏幕亮度)
 
-        需要添加组然后重启
+        需要把用户加入 i2c 组然后重启。基础系统没有这个组，先创建（或安装 i2c-tools 后由其 udev 规则创建）：
 
         ```bash
+        sudo groupadd --system i2c
         sudo gpasswd -a $USER i2c
         reboot
         ```
@@ -1181,7 +1184,7 @@ sudo pacman -S brightnessctl
 1. 安装 matugen
 
     ```bash
-    yay -S matugen
+    sudo pacman -S matugen  # 已进官方 extra
     ```
 
 2. 创建需要的目录和配置文件

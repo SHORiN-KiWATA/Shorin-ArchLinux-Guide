@@ -92,13 +92,13 @@ Ctrl+Alt+S gnome-control-center
 flatpak install flathub com.mattjakeman.ExtensionManager
 ```
 
-或者可以安装浏览器集成扩展 [firefox-gnome-shell-extension-integration](https://addons.mozilla.org/en-US/firefox/addon/gnome-shell-integration/)，然后安装 `chrome-gnome-shell`。
+或者可以安装浏览器集成（Firefox 用户装 [GNOME Shell integration 扩展](https://addons.mozilla.org/en-US/firefox/addon/gnome-shell-integration/)，然后安装连接器）：
 
 ```bash
-yay -S chrome-gnome-shell
+sudo pacman -S gnome-browser-connector
 ```
 
-这样就可以直接在 https://extensions.gnome.org/ 这个网站通过开关安装扩展了。
+这样就可以直接在 https://extensions.gnome.org/ 这个网站通过开关安装扩展了。（旧依赖 `chrome-gnome-shell` 已从官方仓库和 AUR 移除；也可以直接用上面的扩展管理器 App 安装扩展，无需浏览器集成。）
 
 - AppIndicator and KStatusNotifierItem Support
 
@@ -357,13 +357,6 @@ ddcutil --display 1 getvcp 10
 ```bash
 ddcutil --display 1 setvcp 10 + 5
 ddcutil --display 1 setvcp 10 -- 5
-```
-
-输出应该为：
-
-```text
-'ghostty'
-'-e'
 ```
 
 ## 光标主题
