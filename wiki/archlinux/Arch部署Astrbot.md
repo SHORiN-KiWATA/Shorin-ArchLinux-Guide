@@ -13,8 +13,10 @@
 2. 用 `uv` 安装 `astrbot`
 
     ```bash
-    uv tool install astrbot
+    uv tool install astrbot --python 3.12
     ```
+    >官方文档指定用 Python 3.12；不指定时 uv 会使用系统默认解释器（当前 Arch 为 3.14，满足 astrbot 要求但非官方测试组合）。
+    >
     >`astrbot` 相关文件会被安装到 `~/.local/share/uv/tools/astrbot`，通过链接的方式在 `~/.local/bin` 存放了一个 `astrbot` 可执行文件。
 
 3. 初始化并启动
