@@ -43,12 +43,22 @@
 
 ## 嵌套虚拟化
 
-Intel 的话用 kvm_intel
+现代内核（4.20+）默认已启用嵌套虚拟化，一般无需手动配置。可以用以下命令确认：
+
+```bash
+cat /sys/module/kvm_intel/parameters/nested
+cat /sys/module/kvm_amd/parameters/nested
+```
+
+输出为 `Y` 即已启用。Intel 用户对应模块为 `kvm_intel`，AMD 用户为 `kvm_amd`。
+
+如果输出为 `N`，按下面的方法手动开启（把 `kvm_intel` 替换成你实际使用的模块名）：
 
 - 临时生效
 
 ```bash
-modprobe kvm_amd nested=1
+sudo modprobe -r kvm_intel
+sudo modprobe kvm_intel nested=1
 ```
 
 - 永久生效
@@ -56,13 +66,13 @@ modprobe kvm_amd nested=1
   1. 编辑配置文件
 
   ```bash
-  sudo vim /etc/modprobe.d/kvm_amd.conf
+  sudo vim /etc/modprobe.d/kvm_intel.conf
   ```
 
   写入
 
   ```bash
-  options kvm_amd nested=1
+  options kvm_intel nested=1
   ```
 
   2. 重新生成 initramfs
@@ -120,8 +130,10 @@ modprobe kvm_amd nested=1
 确保机器**没有连接到网络**，按下 Shift+F10，鼠标点击选中弹出来的 CMD 窗口，运行：
 
 ```batch
-oobe\bypassnro
+start ms-cxh:localonly
 ```
+
+>注意：旧方法 `oobe\bypassnro` 在新版 Windows 镜像（24H2/25H2，构建 26200.5516+）中已被微软移除，会提示“不是内部或外部命令”，上面这条是替代方法。
 
 ### 文件分享
 
@@ -271,7 +283,7 @@ sudo dmesg | grep -e DMAR -e IOMMU
       sudo vim /etc/mkinitcpio.conf
       ```
 
-   2. `MODULES=（）` 里面写入 `vfio_pci vfio vfio_iommu_type1`
+   2. `MODULES=()` 里面写入 `vfio_pci vfio vfio_iommu_type1`
 
       ```bash
       MODULES=(... vfio_pci vfio vfio_iommu_type1  ...)
@@ -301,11 +313,11 @@ sudo dmesg | grep -e DMAR -e IOMMU
    sudo vim /etc/libvirt/qemu.conf
    ```
 
-   搜索 nvram，在合适的地方写入：
+   现行的 `edk2-ovmf` 包已改用 `/usr/share/edk2/x64/` 下的 4M 固件（如 `OVMF_CODE.4m.fd`），旧教程里的 `/usr/share/ovmf/x64/` 路径已不存在。实际上 virt-manager 会通过 `/usr/share/qemu/firmware/` 的描述文件自动选择固件，一般**无需手动配置 nvram**。如果你的 virt-manager 版本较老确实需要手动指定，写入：
 
    ```text
    nvram = [
-   	"/usr/share/ovmf/x64/OVMF_CODE.fd:/usr/share/ovmf/x64/OVMF_VARS.fd"
+   	"/usr/share/edk2/x64/OVMF_CODE.4m.fd:/usr/share/edk2/x64/OVMF_VARS.4m.fd"
    ]
    ```
 
@@ -842,6 +854,16 @@ memballoon 的目的是提高内存的利用率，但是由于它会不停地"�
 
 3. 在 `<os firmware="efi">` 上面一行插入，这是伪装 BIOS。然后复制 XML 顶部的 UUID，替换下面这段里的【这里要粘贴自己虚拟机的 UUID】。里面的 name 信息可以按需修改。
 
+   **注意：还需要在 `<os>` 元素内部添加一行 `<smbios mode='sysinfo'/>`**（在 `<type>` 标签之后），否则 libvirt 不会把下面的 sysinfo 数据写入 SMBIOS 表，伪装会静默失效：
+
+   ```xml
+   <os firmware="efi">
+     <type arch="x86_64" machine="q35">hvm</type>
+     <smbios mode='sysinfo'/>
+     ...
+   </os>
+   ```
+
    ```xml
    <sysinfo type="smbios">
    <bios>
@@ -882,7 +904,7 @@ memballoon 的目的是提高内存的利用率，但是由于它会不停地"�
 6. 时钟，找到 clock offset 那段修改，时区可以按需修改，不改也没事。
 
    ```xml
-   <clock offset="timezone" timezone="Asia/Japan">
+   <clock offset="timezone" timezone="Asia/Tokyo">
       <timer name="rtc" present="no" tickpolicy="catchup"/>
       <timer name="pit" tickpolicy="discard"/>
       <timer name="hpet" present="no"/>
