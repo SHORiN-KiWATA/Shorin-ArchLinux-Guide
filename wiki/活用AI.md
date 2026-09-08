@@ -108,9 +108,9 @@ Harness，字面意思是套在马身上让马干活的东西，AI Harness 可�
 
     去注册一个opencode的账号，获取到 OpencodeZen 的 APi Key，填入 Opencode 中就可以使用 OpencodeZen 里的免费模型。
 
-- Codex
+- Codex / Antigravity / Cursor 
 
-    注册一个 OpenAI 的账号，登录 `codex` 可以获得一些免费额度。
+    Codex 是 OpenAI 的，Antigravity 是谷歌的，Cursor 是马斯克的，这三个 Harness 注册并登录后都能获得一些免费额度，几个号换着用的话还是挺多的。
 
 - [日日新](https://www.sensenova.cn/token-plan)
 
