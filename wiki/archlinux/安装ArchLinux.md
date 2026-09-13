@@ -861,7 +861,7 @@ cmatrix -r
    pacman -Sy opencode
    ```
 
-   `opencode` 命令打开 AI 助手，输入 `/models` 把模型切换成国产开源模型，如 `deepseek`。
+   `opencode` 命令打开 AI 助手，输入 `/models` 回车可以切换模型。默认的`BigPickle`模型就能完成 Arch Linux 的安装，如果你有自己也可以按照提示配置。
 
 2. 给 AI 指令进行系统安装
 
