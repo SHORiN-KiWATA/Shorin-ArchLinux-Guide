@@ -4,9 +4,7 @@
 - [桥接网络](KVM虚拟机.md#配置桥接网络)
 - [Win11 虚拟机](KVM虚拟机.md#安装-win11-虚拟机)
     - [文件共享](KVM虚拟机.md#文件分享)
-- [远程桌面](KVM虚拟机.md#远程桌面)
-    - [Parsec](KVM虚拟机.md#parsec)
-    - [Sunshine+Moonlight](KVM虚拟机.md#sunshinemoonlight)
+- [串流与远程桌面](串流与远程桌面.md)
 - [显卡直通](KVM虚拟机.md#显卡直通)
     - [Looking Glass](KVM虚拟机.md#looking-glass)
 
@@ -186,47 +184,12 @@ oobe\bypassnro
 
       打开 Win 的文档管理器，在地址栏输入 `\\192.168.122.1`，回车后会弹出密码框。
 
-## 远程桌面
-
-### Parsec
-
-1. Win 虚拟机上浏览器搜索安装
-
-2. Linux 上安装
-
-   ```bash
-   yay -S parsec-bin
-   ```
-
-3. 两个系统都开启，登录相同账号
-
-
-### Sunshine+Moonlight
-
-> [GitHub - LizardByte/Sunshine: Self-hosted game stream host for Moonlight.](https://github.com/LizardByte/Sunshine)
-
-1. 虚拟机 Win11 内安装 Sunshine
-
-   https://github.com/LizardByte/Sunshine
-
-   启动后右下角托盘右键 Sunshine 的图标打开 Web 网页，设置账号密码并登录。
-
-2. 虚拟机内安装虚拟显示器
-
-   https://github.com/VirtualDrivers/Virtual-Display-Driver
-
-3. Linux 安装 Moonlight
-
-   ```bash
-   sudo pacman -S moonlight-qt
-   ```
-
-4. Linux 启动 Moonlight 后会搜索到 Win11 内的 Sunshine，点击连接会出现 PIN 码，在 Win11 的 Sunshine Web 页面设置 PIN 码添加设备就可以了。
+>装好 Win11 虚拟机之后，可以把它串流出来在别的设备上用，见[串流与远程桌面](串流与远程桌面.md)。
 
 ## 显卡直通
 
 分为冷切换和[热切换](#热切换)两种。需要有两个显卡。
->显卡直通完毕之后需要删除原本的 VirtIO、QXL 之类的显卡，然后配置任意远程桌面。
+>显卡直通完毕之后需要删除原本的 VirtIO、QXL 之类的显卡，然后配置任意远程桌面（见[串流与远程桌面](串流与远程桌面.md)）。
 
 在开始配置之前，要确认开启 IOMMU（命令有输出说明开启）：
 
