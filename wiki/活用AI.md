@@ -112,6 +112,10 @@ Harness，字面意思是套在马身上让马干活的东西，AI Harness 可�
 
     Codex 是 OpenAI 的，Antigravity 是谷歌的，Cursor 是马斯克的，这三个 Harness 注册并登录后都能获得一些免费额度，几个号换着用的话还是挺多的。
 
+- [Workbuddy](https://www.workbuddy.cn/)
+
+    腾讯出品，Workbuddy 免费套餐一个月有 500 积分，每日签到还可以领取 100 积分，轻量对话很够用；如果想要接入别的程序，需要用到 `codebuddy-cli`，通过 cli 调用的方式把 codebuddy 接入别的软件；两者积分共通，但签到只能在 Workbuddy 签到，所以要同时装。
+
 - [日日新](https://www.sensenova.cn/token-plan)
 
     日日新目前可以免费使用。
