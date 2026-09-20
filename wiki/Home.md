@@ -75,7 +75,7 @@ Linux `/lɪnəks/` 只是一个内核，我们说 Linux 发行版的时候指的
   
   用户数量上的绝对优势理应让 Ubuntu 在 Steam 的系统排名中拥有压倒性的领先，可事实并非如此。这表明 Ubuntu 的用户大多是“用 Linux 干活”的人，不那么日常，Ubuntu 的教程也总有种课程学习的既视感。
   
-  如果你想学习 Linux 相关知识，或者想租一台云服务器，或者你想自己部署 AI 项目，可以尝试 Ubuntu。
+  如果你想学习 Linux 相关知识，或者想租一台云服务器，或者你想自己部署 AI 项目，可以尝试 Ubuntu 作为桌面系统，或者干脆使用 WSL。
 
 - [PikaOS Linux](https://wiki.pika-os.com/en/home)
 
