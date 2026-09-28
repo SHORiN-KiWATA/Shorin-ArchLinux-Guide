@@ -292,7 +292,7 @@ terminal=kitty -e
 
 ## Nautilus等GTK4应用启动慢
 
-因为 GTK4 使用了新的渲染器，而新的渲染器和 N 卡的 'nvidia-utils' 产生了兼容性问题，设置环境变量使用旧的 GL 渲染器可以解决。
+因为 GTK4 使用了新的渲染器，设置环境变量使用旧的 GL 渲染器可以解决。详情看：https://gitlab.gnome.org/GNOME/gtk/-/work_items/6689
 
 ```bash
 env GSK_RENDERER=gl nautilus
