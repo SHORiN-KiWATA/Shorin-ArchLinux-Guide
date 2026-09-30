@@ -1,0 +1,4 @@
+patch:
+  # Shift 交给 fcitx5 的 AltTriggerKeys（rime/mozc ↔ keyboard-us），Rime 内部不再用 Shift 切中英
+  "ascii_composer/switch_key/Shift_L": noop
+  "ascii_composer/switch_key/Shift_R": noop
