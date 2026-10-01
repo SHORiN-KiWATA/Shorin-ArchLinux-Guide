@@ -425,6 +425,14 @@ gsettings set org.gnome.desktop.interface color-scheme "prefer-light" && gsettin
 
 以上就是原理。只要在检测到 X11 剪贴板发生变化的时候自动完成以上操作就解决了 QQ 的剪贴板问题。
 
+我做的 [linuxqq-wayland-fix](https://github.com/SHORiN-KiWATA/linuxqq-wayland-fix) 在 QQ 内部双向同步 X11 和 Wayland 剪贴板（同时修复了屏幕共享）：
+
+```bash
+yay -S linuxqq-wayland-fix-git
+```
+
+装好后从应用菜单的「QQ（Wayland修复版）」打开 QQ 即可。
+
 ## quickshell图标缺失
 
 添加环境变量：
