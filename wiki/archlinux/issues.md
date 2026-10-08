@@ -29,6 +29,8 @@
 - [天选4锐龙版2023使用Niri关闭屏幕后会自己亮屏](#天选4锐龙版2023使用niri关闭屏幕后会自己亮屏)
 - [以英文的LC\_CTYPE环境变量启动steam导致无法进行中文输入](#以英文的lc_ctype环境变量启动steam导致无法进行中文输入)
 - [btop无法显示AMD核显信息](#btop无法显示amd核显信息)
+- [CPU满载时音频爆音卡顿](#cpu满载时音频爆音卡顿)
+  - [Flatpak版Easy Effects](#flatpak版easy-effects)
 
 ## efibootmgr里面有超级多启动项
 
@@ -515,4 +517,77 @@ env LC_CTYPE=en_US.UTF-8 GTK_IM_MODULE=xim XMODIFIERS=@im=fcitx steam
 
 ```
 sudo pacman -S rocm-smi-lib
+```
+
+## CPU满载时音频爆音卡顿
+
+编译之类让 CPU 跑满的时候，听歌会爆音、断断续续。这不是 PipeWire 的问题，是缺了实时调度：PipeWire 的音频线程拿不到实时优先级，只能和编译进程平等地抢 CPU。Windows 的音频服务默认就有实时优先级，所以没有这个问题。
+
+Arch 上 `rtkit` 和 `realtime-privileges` 都只是 pipewire 的可选依赖，装系统的时候很容易漏掉。检查一下：
+
+```bash
+ps -L -o tid,cls,rtprio,comm -p $(pgrep -x pipewire)
+```
+
+`data-loop.0` 那一行的 CLS 是 `TS`、RTPRIO 是 `-`，说明没有实时调度。正常应该是 `RR` 或 `FF`，后面跟一个数字。
+
+日志里出现 `RTKit error: org.freedesktop.DBus.Error.ServiceUnknown` 也是这个问题：
+
+```bash
+journalctl --user -b -u pipewire | grep mod.rt
+```
+
+安装 rtkit 就行，不需要任何配置，也不用 enable 服务（它会被自动拉起）：
+
+```bash
+sudo pacman -S rtkit
+```
+
+程序只在启动的时候申请一次实时优先级，所以装完要重启电脑。也可以只重启 PipeWire，但正在放音的软件会掉线，要重新播放才有声音：
+
+```bash
+systemctl --user restart pipewire pipewire-pulse wireplumber
+```
+
+### Flatpak版Easy Effects
+
+Flatpak 应用申请实时调度要经过 xdg-desktop-portal 转给 rtkit。我这里的 xdg-desktop-portal 1.22.1 这一步有 bug，Flatpak 应用拿不到实时调度，日志里是：
+
+```text
+Realtime error: Could not get pidns for pid 2: PIDFD_GET_PID_NAMESPACE ioctl failed: Inappropriate ioctl for device
+```
+
+所以 Flatpak 版 Easy Effects 在 CPU 满载时一样会爆音，建议换成原生版。原生版的效果插件是分开打包的，按自己用到的效果安装：
+
+```bash
+sudo pacman -S easyeffects lsp-plugins-lv2 calf
+yay -S deepfilternet-plugin-pipewire-bin
+```
+
+- `lsp-plugins-lv2`：均衡器、压缩器、限幅器、齿音消除等大部分效果
+- `calf`：Stereo Tools 等
+- `deepfilternet-plugin-pipewire-bin`：DeepFilterNet 降噪，没用到可以不装
+- RNNoise 降噪已经是 easyeffects 的依赖，不用另外装
+
+迁移配置，先关掉 Flatpak 版：
+
+```bash
+flatpak kill com.github.wwmm.easyeffects
+cp -a ~/.var/app/com.github.wwmm.easyeffects/config/easyeffects ~/.config/
+cp -a ~/.var/app/com.github.wwmm.easyeffects/data/easyeffects ~/.local/share/
+flatpak uninstall com.github.wwmm.easyeffects
+```
+
+`config` 里是设置（包括屏蔽列表、当前的效果链），`data` 里是预设。卸载不会删掉 `~/.var/app` 里的旧配置，可以留着当备份。
+
+自启动也要改成原生的命令，比如 Niri：
+
+```text
+spawn-at-startup "easyeffects" "-w"
+```
+
+用第一条命令检查 easyeffects 进程，`data-loop.0` 变成 `RR` 就对了：
+
+```bash
+ps -L -o tid,cls,rtprio,comm -p $(pgrep -x easyeffects)
 ```
