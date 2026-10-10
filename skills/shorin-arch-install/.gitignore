@@ -1,0 +1,4 @@
+__pycache__/
+*.pyc
+install.json
+reviewed-plan.sh
