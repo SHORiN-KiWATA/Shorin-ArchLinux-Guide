@@ -120,6 +120,16 @@ Harness，字面意思是套在马身上让马干活的东西，AI Harness 可�
 
     日日新目前可以免费使用。
 
+- [Marvis](https://marvis.qq.com/)
+
+    每日一千万 Token 的免费额度。
+
+- [Magpie](https://github.com/yetone/magpie)
+
+    Magpie 提供 API 聚合服务，可以用一个 API 调用所有事先在后台配置好的模型。
+    
+    不过这不是重点，重点是它有很多社区插件。通常像 Workbuddy、Marvis 这样的软件的免费额度只能在他们自己的客户端里使用，但是通过 Magpie 社区提供的插件，就可以在不安装他们的软件的情况下使用他们的免费额度，也就是所谓的反代。
+
 ## 拓展：在任意软件调用 AI 
 
 可以简单了解一下调用 AI 的方式。
