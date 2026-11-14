@@ -1,0 +1,16 @@
+{
+  "checked_at": "2026-10-06",
+  "guide_repo": "https://github.com/SHORiN-KiWATA/Shorin-ArchLinux-Guide",
+  "guide_current_commit": "d8772456749981c0de3417a84c2783578603cfc6",
+  "guide_video_era_commit": "2db97dde40038b79f6a56a8306b1da1b86ff1c20",
+  "qq_repo": "https://github.com/SHORiN-KiWATA/linuxqq-wayland-fix",
+  "qq_commit": "7d7f82d297e69299ea5419c5900042826158e87a",
+  "video_bvids": [
+    "BV1L2gxzVEgs",
+    "BV1MKa66VEPS"
+  ],
+  "video_evidence": "metadata + official chapter markers + sampled frames; no full transcript available",
+  "full_install_tested": false,
+  "visual_identity_verified": false,
+  "upstream_delivery": "fixed-revision links; not copied into this contribution"
+}

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Shorin Arch 安装"
+  short_description: "按 Shorin 视频安装 GNOME Arch，并配置 QQ Wayland 修复"
+  default_prompt: "Use $shorin-arch-install to inspect the target Arch ISO environment, prepare an auditable installation plan, install the selected Shorin GNOME profile, and verify desktop and QQ functionality."

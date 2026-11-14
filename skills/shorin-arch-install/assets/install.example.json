@@ -1,0 +1,14 @@
+{
+  "profile": "video-2025",
+  "disk": "/dev/nvme1n1",
+  "expected_serial": "REPLACE_WITH_INSPECTED_SERIAL",
+  "expected_model": "REPLACE_WITH_INSPECTED_MODEL",
+  "expected_size_bytes": 0,
+  "username": "archuser",
+  "hostname": "archlinux",
+  "cpu": "amd",
+  "gpu": "amd",
+  "nvidia_packages": [],
+  "swap_gib": 4,
+  "kvm": false
+}

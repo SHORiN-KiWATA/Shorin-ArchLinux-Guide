@@ -1,0 +1,12 @@
+This skill's newly authored instructions, tutorial adaptations and installer helpers
+are distributed under CC BY-SA 4.0. See references/UPSTREAM-CC-BY-SA-4.0.txt.
+
+Upstream guide: 林长枫 Shorin709 / SHORiN-KiWATA
+https://github.com/SHORiN-KiWATA/ShorinArchExperience-ArchlinuxGuide
+Changes: source revision routing, compatibility notes, agent workflow,
+deterministic installer, session settings helper and acceptance checks.
+
+Linux QQ Wayland fix material retains the upstream MIT license at
+references/QQ-MIT-LICENSE.txt.
+Catppuccin Ghostty theme retains the MIT license at assets/CATPPUCCIN-LICENSE.txt.
+This package does not redistribute the source Bilibili videos or wallpapers.
