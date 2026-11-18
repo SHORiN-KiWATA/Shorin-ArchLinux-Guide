@@ -31,6 +31,8 @@
 - [btop无法显示AMD核显信息](#btop无法显示amd核显信息)
 - [CPU满载时音频爆音卡顿](#cpu满载时音频爆音卡顿)
   - [Flatpak版Easy Effects](#flatpak版easy-effects)
+- [字体在OLED或高分屏上出现彩边](#字体在oled或高分屏上出现彩边)
+- [蓝牙耳机连接后自动切换为单声道或音质劣化](#蓝牙耳机连接后自动切换为单声道或音质劣化)
 
 ## efibootmgr里面有超级多启动项
 
@@ -591,3 +593,19 @@ spawn-at-startup "easyeffects" "-w"
 ```bash
 ps -L -o tid,cls,rtprio,comm -p $(pgrep -x easyeffects)
 ```
+
+## 字体在OLED或高分屏上出现彩边
+
+OLED 屏幕（包括笔记本 OLED、QD-OLED）的物理子像素排列与传统 LCD 不同，如果开启了次像素渲染（`rgba=rgb`），文字边缘会出现明显的红蓝或绿色彩边。2K/4K 等高分屏开启次像素渲染也容易发虚。
+
+解决办法：
+在 `~/.config/fontconfig/fonts.conf` 中把 `rgba` 改为 `none`，改用纯灰度抗锯齿即可消除彩边。
+详见：[苹果字体生态与高级渲染](苹果字体生态与高级渲染.md#fontconfig配置)。
+
+## 蓝牙耳机连接后自动切换为单声道或音质劣化
+
+部分蓝牙耳机在被浏览器或软件调用麦克风时，WirePlumber 会自动切到通话模式（HSP/HFP），导致输出变成单声道，音质严重下降。
+
+解决办法：
+创建 `~/.config/wireplumber/wireplumber.conf.d/50-bluez-ldac.conf`，写入 `bluetooth.autoswitch-to-headset-profile = false`，禁止自动切换通话模式，并锁定 LDAC 高音质。
+详见：[PipeWire虚拟环绕与蓝牙LDAC](PipeWire虚拟环绕与蓝牙LDAC.md#wireplumber蓝牙ldac配置)。
