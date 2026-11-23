@@ -26,7 +26,7 @@ Harness，字面意思是套在马身上让马干活的东西，AI Harness 可�
     ```
     sudo pacman -S opencode
     ```
-    >Arch 系也可以试试从 AUR 安装 [Miyu]([https://ithub.global.ssl.fastly.net/SHORiN-KiWATA/Miyu](https://github.com/miyu-agent))，这是我自己的项目。
+    >Arch 系也可以试试从 AUR 安装 [Miyu](https://github.com/miyu-agent)，这是我自己的项目。
 
 启动只需运行 `opencode` 命令即可。
 
