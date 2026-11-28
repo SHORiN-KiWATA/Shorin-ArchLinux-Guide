@@ -693,11 +693,11 @@ ZRAM 将内存的部分空间用作交换空间，如果你没有配置 Swap，�
 
    ```ini
    [zram0]
-   zram-size = ram
+   zram-size = ram/2
    compression-algorithm = zstd
    ```
 
-   `zram-size` 设置最多存储多少数据，注意这里设置的是压缩之前的大小。
+   `zram-size = ram/2` 设置 ZRAM 的大小是内存的一半，可以根据自己实际的内存大小做调整，内存过小的机器可以酌情调大，内存过大的机器可以调小。这里的大小指是压缩前的数据大小，压缩后实际占用比这个数小很多。一台 16G 内存的电脑，设置 8G 的 ZRAM，可能实际占 3.5G 左右。
 
    `compression-algorithm` 设置使用 zstd 算法。
 
